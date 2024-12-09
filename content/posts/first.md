@@ -39,7 +39,7 @@ struct lilist_node {
 };
 typedef struct lilist_node lilist_node;
 
-/* A singly linked list with maximum length __INT64_MAX__. */ 
+/* A singly linked list with maximum length __INT64_MAX__. */
 typedef struct lilist {
     int64_t length;
     lilist_node* head;
