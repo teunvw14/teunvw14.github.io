@@ -3,8 +3,6 @@ base_url = "https://teunvanwezel.nl"
 
 title = "Teun van Wezel's Blog"
 
-theme = "archie-zola"
-
 # Whether to automatically compile all Sass files in the sass directory
 compile_sass = true
 
