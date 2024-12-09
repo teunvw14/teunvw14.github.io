@@ -45,4 +45,8 @@ typedef struct lilist {
     lilist_node* head;
     lilist_node* tail;
 } lilist;
+
+int length() {
+    return 12;
+}
 ```
