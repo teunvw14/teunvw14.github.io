@@ -7,6 +7,8 @@ date = 2024-12-09
 
 With the upcoming [IOTA Rebased network upgrade](https://blog.iota.org/iota-rebased-fast-forward), the [Move](https://sui.io/move) smart contract programming language is coming to IOTA. The goal of this article is to show you how you can get a simple dApp (decentralized application) written in Move up and running quickly. We will write and publish a ***Move smart contract*** on the IOTA Rebased testnet, and create a frontend to interact with it using [***Svelte***](https://svelte.dev).
 
+The code for this article can be found [here](https://github.com/teunvw14/iota-rebased-sc-minimal-example).
+
 # Who is this article for?
 
 This article is for developers who want to get a feeling for writing smart contracts with Move on IOTA. Some previous programming experience is required; familiarity with Rust (similar to Move) and TypeScript (for the frontend) will help a lot.
@@ -17,7 +19,7 @@ Before we can get started, make sure you have installed the following:
 
 - [IOTA CLI](https://github.com/iotaledger/iota/) - installing one of [the pre-built binaries](https://docs.iota.org/developer/getting-started/install-iota#install-from-binaries) is strongly recommended
 - [node/npm](https://nodejs.org/en/download/package-manager)
-- Strongly recommended: Using Visual Studio Code with the [IOTA Move extension](https://marketplace.visualstudio.com/items?itemName=iotaledger.iota-move).
+- Strongly recommended: Using Visual Studio Code with the [IOTA Move extension](https://marketplace.visualstudio.com/items?itemName=iotaledger.iota-move)
 
 
 # Writing a smart contract with Move
