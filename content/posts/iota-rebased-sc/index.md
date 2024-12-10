@@ -166,7 +166,7 @@ Now, there's one last thing that we have to do before we can start creating our 
 <ConfirmedWhaleInterface />
 ```
 
-This component will hold all the HTML and TypeScript for our frontend. 
+This `ConfirmedWhaleInterface` component will hold all the HTML and TypeScript for our frontend.
 
 ## Creating the frontend
 
