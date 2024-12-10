@@ -3,7 +3,7 @@ title = "Data Structures in C: Linked List"
 date = 2024-11-09
 +++
 
-In this post, you'll learn how you can 
+This blog is a work in progress. 
 
 # Data structures
 A data structure is a way to structure data. Right. Makes sense. But what does that actually mean? And why do we need to structure our data? 
