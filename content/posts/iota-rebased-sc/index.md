@@ -303,7 +303,7 @@ When we call `activeWallet.features['standard:connect'].connect()`, the wallet w
 
 Now we're almost done - the only thing left to do is to add the logic for calling our smart contract function. Let's walk through it. 
 
-We will start out by creating the transaction and creating a `Coin<IOTA>` object (named `whaleCoin` in the code) by splitting it from the gas `Coin`. 
+We will start out by creating the transaction and creating a `Coin<IOTA>` object by splitting it from the gas `Coin`. 
 
 ```html
 <!-- src/lib/ConfirmedWhaleInterface.svelte -->
