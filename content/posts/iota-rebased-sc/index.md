@@ -115,7 +115,9 @@ Now, to deploy our smart contract, in the folder `confirmed_whale_nft`:
 $ iota client publish --gas-budget 100000000
 ```
 
-If everything went well, the above command should print the results of the publishing our package. Under 'Object Changes'-'Published Objects', you should see your package with `Modules: confirmed_whale_nft`. *Make sure to copy the displayed `PackageID`, since we will need it later.*
+If everything went well, the above command should print the results of the publishing our package. Under 'Object Changes'-'Published Objects', you should see your package with `Modules: confirmed_whale_nft` (see image below). *Make sure to copy the `PackageID`, since we will need it later to interact with our smart contract.*
+
+![PackageID in command output](package-id.png)
 
 # Creating a frontend
 
@@ -395,6 +397,8 @@ That's it! Our smart contract with frontend is now complete. Your frontend shoul
 
 Of course there are a bunch of things that could be improved: the frontend design, improved smart contract functionality, error handling, testing, etc.. But that's for another article. 
 
-For now, I hope that you learned something and are ready to write your own dApps. Thanks for reading!
+For now, I hope that you learned something and are ready to write your own dApps. If you want to continue learning, consider taking a look at [this article](../iota-move-raffle-tutorial/), which will show you how to create a raffle smart contract with Move. 
+
+Thanks for reading!
 
 For the full code, check out the [accompanying github repository](https://github.com/teunvw14/iota-rebased-sc-minimal-example).
