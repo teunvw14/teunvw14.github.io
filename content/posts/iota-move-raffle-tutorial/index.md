@@ -39,13 +39,13 @@ $ cd raffle
 $ code .
 ```
 
-Let's start out by defining a `Raffle` struct and a `RaffleTicket` struct in `sources/raffle.move`. Also make sure to add the `use`s at the top, we will need those later. 
+Let's start out by defining a `Raffle` struct and a `RaffleTicket` struct in `sources/raffle.move`. Make sure to add the `use` imports at the top, we will need those later. 
 
 ```rust
 // sources/raffle.move
 module raffle::raffle {
 
-    // Imports we will use later on
+    // We will need these later on
     use iota::balance::{Self, Balance};
     use iota::coin::{Coin};
     use iota::clock::{Clock};
@@ -239,7 +239,7 @@ And that's it! Your smart contract should now be complete. If you want to check 
 
 # Deploying our smart contract
 
-Now that we've built our smart contract, we want to make sure it works as intended. Make sure your IOTA Client CLI is configured to the IOTA Rebased testnet ([see here](https://docs.iota.org/references/cli/client#set-current-environment)) and deploy the smart contract to by calling (inside the `raffle` directory): 
+Now that we've built our smart contract, we want to make sure it works as intended. Make sure your IOTA Client CLI is configured to the IOTA Rebased testnet ([see here](https://docs.iota.org/references/cli/client#set-current-environment)) and publish (deploy) the smart contract to by calling (inside the `raffle` directory): 
 
 ```bash
 $ iota client publish
