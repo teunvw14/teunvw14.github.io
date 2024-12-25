@@ -108,7 +108,7 @@ To be technical, [the `transfer::share_object` function](https://docs.iota.org/r
 
 ## Ticket sales
 
-Let's continue by adding a function for buying tickets. The process starts by removing `ticket_price` tokens from the `payment` coin. We add this amount to the `prize_money`. Now we create the ticket. First, generate a new `UID` for the ticket - and add it to the list of `sold_ticket`s. With our new `ticket_id`, we create an instance of our `RaffleTicket` struct and transfer it to whomever called the `buy_ticket` function.
+Let's continue by adding a function for buying tickets. The process starts by removing `ticket_price` tokens from the `payment` coin. We add this amount to the `prize_money`. Then we create the ticket. First, generate a new `UID` for the ticket - and add it to the list of `sold_ticket`s. With our new `ticket_id`, we create an instance of our `RaffleTicket` struct and transfer it to whomever called the `buy_ticket` function.
 
 ```rust
 // sources/raffle.move
