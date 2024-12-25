@@ -165,7 +165,7 @@ module raffle::raffle {
 }
 ```
 
-Make sure to add the error code at the top of your module `const ERaffleAlreadyResolved: u64 = 3;`. We will add a few more of these error codes. It's a good habit to add meaningful error codes to your Move smart contracts. They help users know what exactly went wrong when a transaction fails.
+Make sure to add the error code at the top of your module `const ERaffleAlreadyResolved: u64 = 0;`. We will add a few more of these error codes. It's a good habit to add meaningful error codes to your Move smart contracts. They help users know what exactly went wrong when a transaction fails.
 
 ## Resolving raffles: picking a winner
 
