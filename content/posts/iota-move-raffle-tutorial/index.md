@@ -131,7 +131,7 @@ module raffle::raffle {
 
 Since `UID`s have to be unique by definition, Move's type system won't let us create a copy of `ticket_id` directly. Instead we have to call `to_inner()` to get an `ID` (which basically functions as an object pointer, which MoveVM is fine with us copying). 
 
-Maybe you've already noticed that there's a problem with our function. In fact there's two. The first is that we don't check if there's enough tokens in `payment` to fulfill the `ticket_price`. The second is that this function lets people buy tickets to raffles that have already been resolved (i.e. a winner has already been picked). 
+Maybe you've already noticed that there's a problem with our function. In fact there's two. The first is that we don't check if there's enough tokens in `payment` to fulfill the `ticket_price`. The second is that our `buy_ticket` function lets people buy tickets to raffles that have already been resolved (i.e. raffles for which a winner has already been picked). 
 
 The first problem we don't have to worry about: Luckily for us, calling `coin.split(amount)` aborts automatically if the `coin` doesn't contain at least `amount` tokens.
 
