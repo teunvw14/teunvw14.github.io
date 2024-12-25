@@ -102,7 +102,7 @@ module raffle::raffle {
 }
 ```
 
-We "publicize" the raffle by calling `transfer::share_object`. This call gives all network participants mutable access to `raffle`. This may seem worrying at first: doesn't that mean that anyone can take out all of the `prize_money` from a `Raffle`? No, because the MoveVM only allows directly mutating structs in their defining modules. Which means that people can only mutate `Raffle`s through functions that we expose in our `raffle` module. 
+We "publicize" the raffle by calling `transfer::share_object`. This call gives all network participants mutable access to `raffle`. This may seem worrying at first: doesn't that mean that anyone can take out all of the `prize_money` from a `Raffle`? No, because the MoveVM only lets structs be directly mutated in their defining modules. Which means that people can only mutate `Raffle`s in ways that we let them, as defined through functions exposed in our `raffle` module. 
 
 To be technical, [the `transfer::share_object` function](https://docs.iota.org/references/framework/iota-framework/transfer#function-share_object) only allows network participants to get a mutable reference to the `Raffle` - which allows mutation *within* the defining module, but not anywhere else. In contrast, there also exists a [`transfer::freeze_object` function](https://docs.iota.org/references/framework/iota-framework/transfer#function-freeze_object) which only allows for getting immutable references. Objects that are "frozen" this way can't be mutated, not even by their defining modules. 
 
