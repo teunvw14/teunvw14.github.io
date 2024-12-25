@@ -285,7 +285,7 @@ The output of this command should show you that a `RaffleTicket` was created. Ex
 
 ![The RaffleTicket ObjectID in the command output](raffle-ticket-id.png)
 
-Then, to determine who's won the raffle (it's probably you!), resolve the raffle by calling the `resolve` function. If you do this fast enough (or if you set a really high raffle duration), you will get an error with code `0 = ERaffleNotResolvableYet`. This is good; it means that the raffle is working as intended! Wait a little longer and try again. (Or create a new raffle that has a shorter duration.) Here again we have to pass in the `Clock` shared object at address `0x6`, but also the `Random` shared object, which is at address `0x8`.
+Then, to determine who's won the raffle (it's probably you!), resolve the raffle by calling the `resolve` function. If you do this fast enough (or if you set a really high raffle duration), you will get an error with code `0` (`ERaffleNotResolvableYet`). This is good; it means that the raffle is working as intended! Wait a little longer and try again. (Or create a new raffle that has a shorter duration.) Here again we have to pass in the `Clock` shared object at address `0x6`, but also the `Random` shared object, which is at address `0x8`.
 ```bash
 $ iota client ptb --move-call $PACKAGE_ID::raffle::resolve \
     '<0x2::iota::IOTA>' @$RAFFLE_ID @0x6 @0x8
