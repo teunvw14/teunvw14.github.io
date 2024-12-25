@@ -259,7 +259,7 @@ Now let's see the smart contract in action! We will use the `IOTA Client PTB CLI
 export TICKET_PRICE_NANO=100000000 COIN_ID=0x1234 RAFFLE_DURATION_S=120
 ```
 
-You can change these values to your liking of course. If you need a coin address, you can get the ID of all of your coins by calling `iota client gas`, just use whichever one has enough IOTA to cover the `TICKET_PRICE` (note that 1 IOTA = 1.000.000.000 nanos).
+You can change these values to your liking of course. Make sure to replace the value for `COIN_ID` with a valid address - you can get the ID of all of your coins by calling `iota client gas`. Just use whichever one has enough IOTA to cover the `TICKET_PRICE` (note that 1 IOTA = 1.000.000.000 nanos).
 
 Now let's create a raffle using these variables. Creating a raffle is done as follows, with `'<0x2::iota::IOTA>'` as a type argument for the token type `T`: 
 ```bash
