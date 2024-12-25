@@ -234,7 +234,9 @@ footer {
 }
 
 #main_title {
-  margin-bottom: 10px;
+  display:flex;
+  flex-direction: row;
+  /* justify-items: start; */
 }
 
 /* Common */
