@@ -17,7 +17,7 @@ To write, test, and deploy our smart contract, we will need:
 - [IOTA CLI](https://github.com/iotaledger/iota) - compiling from source takes quite a while, so consider installing one of [the pre-built binaries](https://docs.iota.org/developer/getting-started/install-iota#install-from-binaries)
 - Strongly recommended: Using Visual Studio Code with the [IOTA Move extension](https://marketplace.visualstudio.com/items?itemName=iotaledger.iota-move)
 
-## Raffle functionality description
+## Raffle Smart Contract Requirements
 
 Before we get started, we should specify what exactly we want our raffle smart contract to do. To start off:
 
@@ -27,7 +27,7 @@ Before we get started, we should specify what exactly we want our raffle smart c
 
 You might be able to come up with some more useful functionality - we'll keep it simple here though as to not make this article too long.
 
-# Writing the raffle smart contract
+# Writing the Raffle Smart Contract
 
 Let's get to writing the raffle smart contract. Create a new IOTA Move project, and open up the newly created folder in your code editor. 
 
@@ -37,7 +37,7 @@ $ cd raffle
 $ code .
 ```
 
-## Starting out: Creating the `Raffle` and `RaffleTicket` structs
+## Starting Out: Creating the `Raffle` and `RaffleTicket` structs
 
 Let's start out by defining a `Raffle` struct and a `RaffleTicket` struct in `sources/raffle.move`. Make sure to add the `use` imports at the top, we will need those later. 
 
@@ -74,7 +74,7 @@ A few things might not be immediately clear here. Hopefully the following notes 
 - To allow users to choose the token used to pay for raffle tickets, we have to make the `Raffle` type generic over the token type `T`, which is why the raffle type is defined as `Raffle<phantom T>`.
 - The `RaffleTicket` doesn't really "do" anything. The power of defining this struct lies in Move's type system: our smart contract will be the only one able to create these `RaffleTicket`s, so that we can be sure no one else can create them (without paying the ticket price).
 
-## Raffle creation
+## Raffle Creation
 
 Next, let's add a function for creating raffles. All we need to create an instance of our `Raffle` struct is calculating the redemption timestamp. The function will need to take a reference to the shared `Clock` to get the current time. (We'll see how to pass a reference to `Clock` as an argument at the end.)
 
@@ -106,7 +106,7 @@ We "publicize" the raffle by calling `transfer::share_object`. This call gives a
 
 To be technical, [the `transfer::share_object` function](https://docs.iota.org/references/framework/iota-framework/transfer#function-share_object) only allows network participants to get a mutable reference to the `Raffle` - which allows mutation *within* the defining module, but not anywhere else. In contrast, there also exists a [`transfer::freeze_object` function](https://docs.iota.org/references/framework/iota-framework/transfer#function-freeze_object) which only allows for getting immutable references. Objects that are "frozen" this way can't be mutated, not even by their defining modules. 
 
-## Ticket sales
+## Ticket Sales
 
 Let's continue by adding a function for buying tickets. The process starts by removing `ticket_price` tokens from the `payment` coin. We add this amount to the `prize_money`. Then we create the ticket. First, generate a new `UID` for the ticket - and add it to the list of `sold_ticket`s. With our new `ticket_id`, we create an instance of our `RaffleTicket` struct and transfer it to whomever called the `buy_ticket` function.
 
@@ -167,7 +167,7 @@ module raffle::raffle {
 
 Make sure to add the error code at the top of your module `const ERaffleAlreadyResolved: u64 = 0;`. We will add a few more of these error codes. It's a good habit to add meaningful error codes to your Move smart contracts. They help users know what exactly went wrong when a transaction fails.
 
-## Resolving raffles: picking a winner
+## Resolving Raffles: Picking a Winner
 
 Once the raffle has ended, we want to have our smart contract pick a winner at random. Let's create a function `resolve` for this. We will use [the `random` module](https://docs.iota.org/references/framework/iota-framework/random) to get a random ticket. We set `raffle.winning_ticket`, so that the winner can claim their prize money later on. 
 
@@ -200,7 +200,7 @@ module raffle::raffle {
 
 Similarly to `Clock`, we will need a reference to the shared `Random` object to generate a random number. Lastly, again make sure to add the error codes `ERaffleAlreadyResolved` and `ERaffleNotResolvableYet` at the top of your module. 
 
-## Paying out the prize money
+## Paying Out Prize Money
 
 We're almost done now. Note that the `resolve` function doesn't pay out the prize money - we will keep that functionality separate. For this purpose, we will create a dedicated function to claim the prize money. We'll need to make sure the raffle is resolved (i.e. a winner has been picked) and that the function caller has the winning ticket.
 
@@ -237,7 +237,7 @@ We delete the ticket to guarantee that this function can be called successfully 
 
 And that's it! Your smart contract should now be complete. If you want to check your code, the full source code can be found [here](https://github.com/teunvw14/move-raffle/blob/main/sources/raffle.move).
 
-# Deploying our smart contract
+# Deploying Our Smart Contract
 
 Now that we've built our smart contract, we want to make sure it works as intended. Make sure your IOTA Client CLI is configured to the IOTA Rebased testnet ([see here](https://docs.iota.org/references/cli/client#set-current-environment)) and publish (deploy) the smart contract to by calling (inside the `raffle` directory): 
 
@@ -251,7 +251,7 @@ Under 'Object Changes'-'Published Objects', you should see your package with `Mo
 export PACKAGE_ID=your_package_id_here
 ```
 
-# Using our smart contract
+# Using Our Smart Contract
 
 Now let's see the smart contract in action! We will use the `IOTA Client PTB CLI` to call the functions in our smart contract. We will create a raffle with tickets paid for in IOTA. To keep things tidy, start out by defining all the relevant environment variables in your shell:
 
