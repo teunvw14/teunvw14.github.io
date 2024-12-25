@@ -1,7 +1,7 @@
 # The URL the site will be built for
 base_url = "https://teunvw14.github.io"
 
-title = "Teun van Wezel's Blog"
+title = "Teun van Wezel's Tech Blog"
 
 # Whether to automatically compile all Sass files in the sass directory
 compile_sass = true
