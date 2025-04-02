@@ -62,7 +62,7 @@ module confirmed_whale_nft::confirmed_whale_nft {
     // least 5 IOTA.
     public fun confirm_whale(coin: Coin<IOTA>, ctx: &mut TxContext) {
         let coin_value_iota = coin.value() / 1_000_000_000;
-        let caller = tx_context::sender(ctx);
+        let caller = ctx.sender();
         if (coin_value_iota >= 5) {
             let nft = ConfirmedWhaleNFT {
                 id: object::new(ctx),

@@ -26,7 +26,7 @@ katex_enable = true
 mode = "toggle"
 
 # subtitle will show under the title in index page
-subtitle = "A zola theme forked from [archie](https://github.com/athul/archie)"
+subtitle = "subtitle"
 
 # if set true, will use external CDN resource to load font and js file
 useCDN = false
