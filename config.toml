@@ -36,6 +36,9 @@ favicon = "/icon/favicon.png"
 # show in the footer
 copyright = "Teun van Wezel"
 
+# google analytics
+ga = "G-4SM5P4FCHX"
+
 
 # optional: config your i18n entry
 [extra.translations]
