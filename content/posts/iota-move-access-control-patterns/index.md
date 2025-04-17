@@ -45,7 +45,7 @@ module some_package::some_module {
 }
 ```
 
-Doing this leads to the following compilation error: `Invalid access of field 'magic_constant' on the struct 'my_shared_object::my_shared_object::MagicImmutableObject'. The field 'magic_constant' can only be accessed within the module 'my_shared_object::my_shared_object' since it defines 'MagicImmutableObject'.`
+Doing this leads to the following compilation error: "Invalid access of field `magic_constant` on the struct `my_shared_object::my_shared_object::MagicImmutableObject`. The field `magic_constant` can only be accessed within the module `my_shared_object::my_shared_object` since it defines `MagicImmutableObject`."
 
 If you want to be able to read the magic constant, you need to write a public accessor function in `my_shared_object::my_shared_object` like this:
 

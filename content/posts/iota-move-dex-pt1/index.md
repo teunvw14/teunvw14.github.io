@@ -29,7 +29,7 @@ If at any point you get stuck, you can always refer back to the reference implem
 
 ## 1.3 Acknowledgements 
 
-*This article was supported by a grant from [iotalabs](https://iotalabs.io/).*
+*Many thanks to [iotalabs](https://iotalabs.io/) for supporting this article series with a grant.*
 
 # 2. How Decentralized Exchanges Work
 
