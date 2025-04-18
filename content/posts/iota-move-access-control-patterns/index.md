@@ -455,7 +455,7 @@ A partner protocol can then publish their Move Package (or upgrade it) to includ
 ```rust
 module partner_package::partner_module {
     use iota::coin::Coin;
-    use playground::DEX_module;
+    use DEX_package::DEX_module;
 
     public struct PARTNER_APP has drop {}
 
