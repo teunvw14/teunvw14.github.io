@@ -196,7 +196,7 @@ module whitelist_package::whitelist_module {
     }
 
     fun init(ctx: &mut TxContext) {
-        // Create OwnerCap and AdminCap and send to the package publisher
+        // Create AdminCap and send to the package publisher
         let publisher = ctx.sender();
         let admin_cap = AdminCap {
             id: object::new(ctx)
@@ -370,6 +370,108 @@ module ticket_package::ticket_module {
 ```
 
 Note that we destroy the ticket by unwrapping the `Ticket` struct and calling `object::delete` on it. This guarantees that the ticket can only be used once.
+
+# Module Level Whitelist
+
+The final pattern is a bit different than the previous ones: It works on the module level instead of the user level. It's therefore also a bit more advanced. It makes smart use of the MoveVM type system to create a whitelist of modules that can access particular parts of your code. Remember that types can only be instantiated in the modules that define them; this pattern works by requiring a type unique to another module as a key. 
+
+As an example, let's imagine you have a DEX smart contract. You might want to partner up with some other protocols later on, and offer swaps with lower fees to those other protocols. Then you could define your DEX module like this:
+
+```rust
+module DEX_package::DEX_module {
+    use iota::bag;
+    use iota::coin::Coin;
+
+    // We have to store the `AppKey`s in a bag (instead of a vector) because the
+    // types will be heterogeneous (the T in AppKey<T> will be different for each app). 
+    public struct AppState has key {
+        id: UID,
+        whitelist: bag::Bag 
+    }
+
+    public struct AdminCap has key {
+        id: UID
+    }
+
+    // AppKey is used to grant other modules (apps) access to restricted 
+    // functionality
+    public struct AppKey<phantom T: drop> has copy, drop, store {}
+
+    fun init(ctx: &mut TxContext) {
+        // Create AdminCap and send to the package publisher
+        let publisher = ctx.sender();
+        let admin_cap = AdminCap {
+            id: object::new(ctx)
+        };
+        transfer::transfer(admin_cap, publisher);
+
+        // Create AppState that will hold the whitelist
+        let state = AppState {
+            id: object::new(ctx),
+            whitelist: bag::new(ctx)
+        };
+        
+        transfer::share_object(state);
+    }
+
+    // Require AdminCap to add a module to whitelist. Note that you don't need
+    // to create an actual object of type `App` here, because it's a phantom
+    // parameter.
+    public fun whitelist_add<App: drop>(_: &AdminCap, state: &mut AppState) {
+        state.whitelist.add(AppKey<App> {}, true);
+    }
+
+    // Require AdminCap to remove a module from whitelist. Note that you don't 
+    // need to create an actual object of type `App` here, because it's a 
+    // phantom parameter.
+    public fun whitelist_remove<App: drop>(_: &AdminCap, state: &mut AppState) {
+        let _app_key: AppKey<App> = state.whitelist.remove(AppKey<App> {});
+    }
+
+    #[error]
+    const EAppNotWhitelisted: u64 = 0;
+
+    // Allow whitelisted apps to get an AppKey. The trick here is requiring 
+    // `_app`, an object of type `App`, which can only be created by the module
+    // that defines it.
+    public fun get_app_key<App: drop>(_app: App, state: &mut AppState): AppKey<App> {
+        assert!(state.whitelist.contains(AppKey<App> {}), EAppNotWhitelisted);
+        AppKey<App> {}
+    }
+
+    // Some swap function for your DEX
+    public fun swap<L, R>(coin: Coin<L>, ctx: &mut TxContext): Coin<R> {...}
+
+    // Whitelisted modules can call this because they can create an `AppKey`.
+    public fun swap_reduced_fees<L, R, App: drop>(coin: Coin<L>, key: AppKey<App>, ctx: &mut TxContext): Coin<R> { 
+
+        ... // Execute swap with reduced fees
+    }
+}
+```
+
+A partner protocol can then publish their Move Package (or upgrade it) to include this:
+
+```rust
+module partner_package::partner_module {
+    use iota::coin::Coin;
+    use playground::DEX_module;
+
+    public struct PARTNER_APP has drop {}
+
+    fun use_swap_reduced_fees<L, R>(coin: Coin<L>, dex_state: &mut DEX_module::AppState, ctx: &mut TxContext) {
+        // This call will fail with EAppNotWhitelisted if it's not whitelisted!
+        let key = DEX_module::get_app_key(PARTNER_APP {}, dex_state);
+
+        // Use key
+        let swap_result: Coin<R> = DEX_module::swap_reduced_fees(coin, key, ctx);
+
+        ... // Some other logic specific to this protocol
+    }
+}
+```
+
+After the partner published this module, the admin of the DEX module can whitelist the partner module by calling `whitelist_add<partner_module::PARTNER_APP>(cap, state)`. (Calling this function only works after the `partner_module::PARTNER_APP` module has been published and thus defined.)
 
 # No Restrictions
 
