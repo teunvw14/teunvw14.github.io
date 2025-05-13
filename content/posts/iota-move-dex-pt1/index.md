@@ -37,12 +37,12 @@ Since we will be building a decentralized exchange, it is probably be useful to 
 
 By a **decentralized exchange**, or **DEX** for short, we mean a collection of trading pools, where each pool lets users swap between a different token pair. So, when we say we want to know "how a DEX works", what we really want to know is how its trading pools work. So that's what we will describe here.
 
-Let's take as an example a pool with the token pair `BTC/ETH`. Then this `BTC/ETH` trading pool generally works like this:
+Let's take as an example a pool with the token pair `ETH/BTC`. Then this `ETH/BTC` trading pool generally works like this:
 
 - **Liquidity Providers (LP)**: Some users make their `BTC` and `ETH` available to be swapped against. The tokens they provide are collected (pooled) in a *liquidity pool*. These users are not really interested in swapping between the tokens. They simply provide this liquidity to earn fees from swaps inside the pool. Users that provide trading liquidity in this way are referred to as *liquidity providers* (sometimes shortened to LP).
 - **Trade at Any Time without Counterparty**: Traders can swap `BTC` for `ETH`, or `ETH` for `BTC` at any time at the current pool price. These swaps do not require anyone on the other side buying the token the user is offering, or offering the token the user wants to buy.
 - **Swaps Adjust the Pool Price**: Swapping for `BTC` makes `BTC` more expensive (in terms of `ETH`), and swapping for `ETH` makes `ETH` more expensive (in terms of `BTC`). This makes sure that the market is efficient. Capitalizing on an arbitrage opportunity - i.e., buying cheap on the DEX and selling for a higher price elsewhere - immediately resolves the price difference, because buying drives the price up. How much the price of a pair changes due to a swap is referred to as the *price slippage*. 
-- **Impermanent Loss**: When a Liquidity Provider withdraws their liquidity, they may not get back exactly what they provided. If someone provides `1 ETH` and `0.2 BTC`, and the `BTC` price surges (relative to `ETH`), then some - or in the most extreme scenario, all -  of the `0.2 BTC` will have been swapped for `ETH`. When the Liquidity Provider withdraws, they get back much less than the `0.2 BTC` that they provided. Instead they get back an `ETH` amount "equivalent" to the `BTC` they didn't get back (in addition to the `1 ETH` deposited). The USD value of the withdrawn `ETH` and `BTC` might be lower than the USD value of the deposited amounts. This loss can be prevented by waiting until the `BTC/ETH` price returns to the price level at which the liquidity was provided (hence why it's called *impermanent loss*).
+- **Impermanent Loss**: When a Liquidity Provider withdraws their liquidity, they may not get back exactly what they provided. If someone provides `10 ETH` and `0.5 BTC`, and the `BTC` price surges (relative to `ETH`), then some - or in the most extreme scenario, all -  of the `0.5 BTC` will have been swapped for `ETH`. When the Liquidity Provider withdraws, they get back much less than the `0.5 BTC` that they provided. Instead they get back an `ETH` amount "equivalent" to the `BTC` they didn't get back (in addition to the `10 ETH` deposited). The USD value of the withdrawn `ETH` and `BTC` might be lower than the USD value of the deposited amounts. This loss can be prevented by waiting until the `ETH/BTC` price returns to the price level at which the liquidity was provided (hence why it's called *impermanent loss*).
 
 There are quite a few different models for DEXs. Some are relatively simple, like the traditional constant-product model. We will be building our DEX on a different, more complex model: the Liquidity Book model.
 
@@ -59,11 +59,11 @@ But first a little bit of information about providing liquidity in Liquidity Boo
 So what exactly are these *bins* that LB pools are made up of? In an LB pool, each bin represents a discrete price point at which swaps can occur. Every LB pool has one **active bin**, inside which the pool always starts executing swaps. In that sense, the active bin price represents the pool price. The pool always tries to execute a swap inside as few bins as possible. In cases where the swap is small enough, it can be executed completely in the active bin, so that the swap causes no price change. This is called a **zero-slippage** swap, and it is one of the unique features of LB pools.
 
 ### 2.1.1 LB Pool Swaps Examples
-Let's look at two examples of swaps in an imaginary `BTC/ETH` LB pool. Let's assume that the pool already has some liquidity in it, and the starting state of the pool is as shown in the image below. 
+Let's look at two examples of swaps in an imaginary `ETH/BTC` LB pool. Let's assume that the pool already has some liquidity in it, and the starting state of the pool is as shown in the image below. 
 
 ![LB Graphic Pool Starting State](LB-graphic-starting-state.png)
 
-We can see five bins of this pool (but there may be more). Bin `15` is the **active bin**, and it has a trading price of `0.20 BTC/ETH`. That means that any swaps, if they are small enough, will be filled at that price. 
+We can see five bins of this pool (but there may be more). Bin `15` is the **active bin**, and it has a trading price of `0.20 ETH/BTC`. That means that any swaps, if they are small enough, will be filled at that price. 
 
 There are a few things to note here:
 
@@ -88,9 +88,9 @@ Only when you perform a swap of large enough magnitude, the price of the pair ch
 
 This swap is a bit more complicated, so let's go over it in a little more detail. 
 
-First, the swap trades `3 BTC` for `15 ETH` in the active bin `15`. The `ETH` in bin `15` is then depleted, but the trader still has `1 BTC` they want to swap. The swap **crosses over** to bin `16`, which becomes the active bin. There the pool fulfills the rest of the order at the new active bin price of `0.21 BTC/ETH`, resulting in `1 BTC / 0.21 ≈ 4.8 ETH`, making for a total swap of `4 BTC` for `19.8 ETH`. 
+First, the swap trades `3 BTC` for `15 ETH` in the active bin `15`. The `ETH` in bin `15` is then depleted, but the trader still has `1 BTC` they want to swap. The swap **crosses over** to bin `16`, which becomes the active bin. There the pool fulfills the rest of the order at the new active bin price of `0.21 ETH/BTC`, resulting in `1 BTC / 0.21 ≈ 4.8 ETH`, making for a total swap of `4 BTC` for `19.8 ETH`. 
 
-If bin `16` didn't contain the `4.8 ETH` required to complete the swap, the swap would have kept crossing over to bins on the right until the swap was complete. Note that if there was a very large amount of bins to the right, each holding a very small amount of `ETH`, the swap would cross over so many times (moving the active bin further and further right) that the swap creates a massive price increase. Alternatively, if there had been no more bins after bin `15`, and thus no more `ETH` to swap against, the swap would have aborted. Without the required `ETH`, the swap can't be fully completed, so the swap aborts. 
+If bin `16` didn't contain the `4.8 ETH` required to complete the swap, the swap would have kept crossing over to bins on the right until the swap was complete. Note that if there was a very large amount of bins to the right, each holding a very small amount of `ETH`, the swap would cross over so many times (moving the active bin further and further right) that the swap would create a massive price increase. Alternatively, if there had been no more bins after bin `15`, and thus no more `ETH` to swap against, the swap would have aborted. Without the required `ETH`, the swap can't be fully completed, so the swap aborts. 
 
 And that's how LB pool swaps work! If you would like to dive deeper into the technical details of the Liquidity Book model, take a look at the [LFJ docs](https://docs.lfj.gg/).
 
