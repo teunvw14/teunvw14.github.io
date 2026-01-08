@@ -126,6 +126,36 @@ code {
   padding: 0.1em 0.2em;
 }
 
+.token.comment {
+  color: lightgreen
+}
+
+.token.namespace {
+  color: lightseagreen
+}
+
+.token.keyword {
+  color: lightskyblue
+}
+
+.token.class-name {
+  color: lightskyblue
+}
+
+.token.constant {
+  color: orangered
+}
+
+.token.type-definition.class-name {
+  color: orangered
+}
+.token.number {
+  color:yellow
+}
+.token.function {
+  color: #96cf9f
+}
+
 pre {
   background-color: #ececec;
   line-height: 1.4;
