@@ -52,7 +52,7 @@ To keep track of provided liquidity, we will give LP's a `LiquidityProviderRecei
 Let's go to our file `liquidity_book.move` and define the `LiquidityProviderReceipt` type:
 
 ```rust
-public struct LiquidityProviderReceipt has key {
+public struct LiquidityProviderReceipt has key, store {
     id: UID,
     pool_id: ID, // The id that the liquidity was provided in
     deposit_time_ms: u64, // Timestamp from the moment the liquidity was provided
@@ -75,7 +75,7 @@ public struct BinProvidedLiquidity has store, copy, drop {
     right: u64
 }
 
-public struct LiquidityProviderReceipt has key {
+public struct LiquidityProviderReceipt has key, store {
         id: UID,
         pool_id: ID, // The id that the liquidity was provided in
         deposit_time_ms: u64, // Timestamp from the moment the liquidity was provided
@@ -85,8 +85,6 @@ public struct LiquidityProviderReceipt has key {
 
 You might wonder why we need the `BinProvidedLiquidity` type, given that it's basically a wrapper around a triple of `u64`s. Why can't we use `liquidity: vector<(u64, u64, u64)>`? This is because tuples aren't first-class values, as explained [here in The Move Reference](https://move-book.com/reference/primitive-types/tuples.html). This means, among other things, that tuples can't be used to instantiate generics. Note that even if using tuples was possible here, using the custom type strongly improves the readability of some of the code we will write later.
 
-One final note on `LiquidityProviderReceipt`: We purposely don't give it the `store` ability so that receipts cannot (accidentally) be transferred, since an LP would then completely lose access to their liquidity.
-
 ## 2.3 Printing Receipts, or Providing Liquidity
 
 Now, let's define a function to provide liquidity and return an instance of this new `LiquidityProviderReceipt` type. We will extract the code for distributing the liquidity across bins from the `new` function, and put this logic into a function `provide_liquidity_uniformly`. We will make just a few small changes. We will not go over this code in detail since it's covered in some detail in the previous article. The primary addition here is the creation of the `LiquidityProviderReceipt` and adding a `BinProvidedLiquidity` entry in the `liquidity` vector every time we add liquidity to a bin. These changes are denoted with `!NEW!` in the comments of the code to make it easy to spot them.
@@ -94,14 +92,14 @@ Now, let's define a function to provide liquidity and return an instance of this
 ```rust
 /// Add liquidity to the pool around the active bin with a uniform distribution
 /// of the tokens amongst those bins.
-entry fun provide_liquidity_uniformly<L, R>(
+public fun provide_liquidity_uniformly<L, R>(
     self: &mut Pool<L, R>,
     bin_count: u64,
     mut coin_left: Coin<L>,
     mut coin_right: Coin<R>,
     clock: &Clock,
     ctx: &mut TxContext
-) {
+): LiquidityProviderReceipt {
     // An odd number of bins is required, so that, including the active
     // bin, there is liquidity added to an equal amount of bins to the left
     // and right of the active bins
@@ -186,8 +184,8 @@ entry fun provide_liquidity_uniformly<L, R>(
         right: amount_right_active_bin
     });
 
-    // Give receipt
-    transfer::transfer(receipt, ctx.sender());
+    // Return receipt
+    receipt
 }
 ```
 
@@ -257,7 +255,13 @@ Now, let's look at how a receipt can be redeemed for liquidity. It's pretty stra
 ```rust
 /// Withdraw all provided liquidity from `pool` using a
 /// `LiquidityProviderReceipt`.
-entry fun withdraw_liquidity<L, R> (self: &mut Pool<L, R>, receipt: LiquidityProviderReceipt, ctx: &mut TxContext) {
+public fun withdraw_liquidity<L, R> (
+    self: &mut Pool<L, R>,
+    receipt: LiquidityProviderReceipt,
+    ctx: &mut TxContext
+):
+    (Coin<L>, Coin<R>)
+{
     let LiquidityProviderReceipt {id: receipt_id, pool_id: receipt_pool_id, deposit_time_ms, liquidity: mut provided_liquidity} = receipt;
 
     // Make sure that the receipt was given for liquidity in this pool
@@ -304,14 +308,11 @@ entry fun withdraw_liquidity<L, R> (self: &mut Pool<L, R>, receipt: LiquidityPro
     };
     provided_liquidity.destroy_empty();
 
-    // Send the liquidity back to the liquidity provider
-    let sender = ctx.sender();
-
-    transfer::public_transfer(result_coin_left, sender);
-    transfer::public_transfer(result_coin_right, sender);
-
     // Delete the receipt so liquidity can't be withdrawn twice
     object::delete(receipt_id);
+
+    // Return the coins
+    (result_coin_left, result_coin_right)
 }
 ```
 
@@ -608,7 +609,7 @@ Let's start out by modifying the `withdraw_liquidity` function we wrote above to
 Fees are paid out one bin at a time, same as the provided liquidity. We show the code for this below. To keep it simple, let's only consider the fees in the `fee_log_left` of each bin. The code for the `fee_log_right` will once again be analogous. 
 
 ```rust
-entry fun withdraw_liquidity<L, R> (self: &mut Pool<L, R>, receipt: LiquidityProviderReceipt, ctx: &mut TxContext) {
+public fun withdraw_liquidity<L, R> (self: &mut Pool<L, R>, receipt: LiquidityProviderReceipt, ctx: &mut TxContext) {
     ... // setup code
     while (!provided_liquidity.is_empty()) {
         let receipt_bin_liquidity = provided_liquidity.pop_back();
@@ -665,7 +666,7 @@ You may also wonder why we traverse from the end of the vector (most recent to o
 There is one final change we need to make to `withdraw_liquidity`, which is that we need to update the `bin.provided_left` and `bin.provided_right` at the very end of the while loop. 
 
 ```rust
-entry fun withdraw_liquidity<L, R> (self: &mut Pool<L, R>, receipt: LiquidityProviderReceipt, ctx: &mut TxContext) {
+public fun withdraw_liquidity<L, R> (self: &mut Pool<L, R>, receipt: LiquidityProviderReceipt, ctx: &mut TxContext) {
     ... // Setup as shown before
     while (!provided_liquidity.is_empty()) {
         ... // As shown before: payout calculations (fees + provided liquidity)
@@ -685,7 +686,7 @@ And that's it! You have now added all required functionality for users to supply
 The full code for `withdraw_liquidity`, including the fee calculations for the `fee_log_right` is shown below for reference.
 
 ```rust
-entry fun withdraw_liquidity<L, R> (self: &mut Pool<L, R>, receipt: LiquidityProviderReceipt, ctx: &mut TxContext) {
+public fun withdraw_liquidity<L, R> (self: &mut Pool<L, R>, receipt: LiquidityProviderReceipt, ctx: &mut TxContext) {
     let LiquidityProviderReceipt {id: receipt_id, pool_id: receipt_pool_id, deposit_time_ms, liquidity: mut provided_liquidity} = receipt;
 
     // Make sure that the receipt was given for liquidity in this pool
@@ -779,14 +780,11 @@ entry fun withdraw_liquidity<L, R> (self: &mut Pool<L, R>, receipt: LiquidityPro
     };
     provided_liquidity.destroy_empty();
 
-    // Send the liquidity back to the liquidity provider
-    let sender = ctx.sender();
-
-    transfer::public_transfer(result_coin_left, sender);
-    transfer::public_transfer(result_coin_right, sender);
-
     // Delete the receipt so liquidity can't be withdrawn twice
     object::delete(receipt_id);
+
+    // Return the coins
+    (result_coin_left, result_coin_right)
 }
 ```
 
