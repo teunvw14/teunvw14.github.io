@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+
+    
+        <title>
+             Smart Contracts on IOTA Rebased - an Introduction
+            
+        </title>
+
+        
+            <meta property="og:title" content="Smart Contracts on IOTA Rebased - an Introduction" />
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+         <link rel="icon" type="image/png" href=&#x2F;icon&#x2F;favicon.png />
+    
+
+    
+
+    
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4SM5P4FCHX"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-4SM5P4FCHX');
+        </script>
+    
+
+    
+    
+        <script src=https://teunvw14.github.io/js/feather.min.js></script>
+    
+
+
+    
+        <link href=https://teunvw14.github.io/css/fonts.css rel="stylesheet" />
+    
+
+    <link rel="stylesheet" type="text/css" media="screen" href=https://teunvw14.github.io/css/main.css />
+
+    
+        <link
+            rel="stylesheet"
+            id="darkModeStyle"
+            type="text/css"
+            href=https://teunvw14.github.io/css/dark.css
+            
+            
+                disabled
+            
+        />
+    
+
+    
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+    
+
+
+    
+
+
+</head>
+
+
+<body>
+    <div class="content">
+        <header>
+    
+    <div class="main" id="main_title">
+        <img src="../../favicon_hires.png" style="max-height: 24px; margin-right: 8px;"/>
+        <a href=https:&#x2F;&#x2F;teunvw14.github.io>Teun van Wezel&#x27;s Tech Blog</a>
+    </div>
+    
+    <nav>
+        
+            <a href=&#x2F;>Blog</a>
+        
+            <a href=&#x2F;posts>All posts</a>
+        
+
+        
+            |
+
+            
+                <a href=&#x2F;>en</a>
+            
+        
+
+        
+            | <a id="dark-mode-toggle" onclick="toggleTheme()" href=""></a>
+            <script src=https://teunvw14.github.io/js/themetoggle.js></script>
+        
+    </nav>
+</header>
+
+
+        
+    
+<main>
+    <article>
+        <div class="title">
+            <h1 class="title">Smart Contracts on IOTA Rebased - an Introduction</h1>
+            <div class="meta">
+                
+                on  2024-12-09
+
+                
+            </div>
+        </div>
+
+        
+
+        <section class="body">
+            <p><img src="https://teunvw14.github.io/posts/iota-rebased-sc/iota-rebased.jpg" alt="IOTA Rebased logo" /></p>
+<p>With the upcoming <a rel="noopener" target="_blank" href="https://blog.iota.org/iota-rebased-fast-forward">IOTA Rebased network upgrade</a>, the <a rel="noopener" target="_blank" href="https://sui.io/move">Move</a> smart contract programming language is coming to IOTA. The goal of this article is to show you how you can get a simple dApp (decentralized application) written in Move up and running quickly. We will write and publish a <em><strong>Move smart contract</strong></em> on the IOTA Rebased testnet, and create a frontend to interact with it using <a rel="noopener" target="_blank" href="https://svelte.dev"><em><strong>Svelte</strong></em></a>.</p>
+<p>The code for this article can be found <a rel="noopener" target="_blank" href="https://github.com/teunvw14/iota-rebased-sc-minimal-example">here</a>.</p>
+<h1 id="who-is-this-article-for">Who is this article for?</h1>
+<p>This article is for developers who want to get a feeling for writing smart contracts with Move on IOTA. Some previous programming experience is required; familiarity with Rust (similar to Move) and TypeScript (for the frontend) will help a lot.</p>
+<h1 id="prerequisites">Prerequisites</h1>
+<p>Before we can get started, make sure you have installed the following:</p>
+<ul>
+<li><a rel="noopener" target="_blank" href="https://github.com/iotaledger/iota/">IOTA CLI</a> - installing one of <a rel="noopener" target="_blank" href="https://docs.iota.org/developer/getting-started/install-iota#install-from-binaries">the pre-built binaries</a> is strongly recommended</li>
+<li><a rel="noopener" target="_blank" href="https://nodejs.org/en/download/package-manager">node/npm</a></li>
+<li>Strongly recommended: Using Visual Studio Code with the <a rel="noopener" target="_blank" href="https://marketplace.visualstudio.com/items?itemName=iotaledger.iota-move">IOTA Move extension</a></li>
+</ul>
+<h1 id="writing-a-smart-contract-with-move">Writing a smart contract with Move</h1>
+<p>Alright, let's get to writing a smart contract. To keep things very simple, we will create a smart contract that sends a <code>ConfirmedWhaleNFT</code> to anyone that interacts with the smart contract and proves that they have more than 5 IOTA. </p>
+<p>The smart contract will work as follows: the user can send a <code>Coin&lt;IOTA&gt;</code> object to the smart contract, which the smart contract will then immediately return to the sender. (In IOTA Move, IOTA tokens are represented as <code>Coin&lt;IOTA&gt;</code> objects, which can hold any number of IOTA tokens.) If the <code>Coin</code> object contains at least 5 IOTA, we will also create and send a <code>ConfirmedWhaleNFT</code> to the user. If the <code>Coin</code> object contains too little funds, the user will not receive a <code>ConfirmedWhaleNFT</code>. You can think of this NFT as a &quot;proof of funds&quot; NFT.</p>
+<p>Let's start out by creating our project using the <code>iota</code> CLI. We'll call our package <code>confirmed_whale_nft</code>. </p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota move new confirmed_whale_nft
+</span></code></pre>
+<p>This should create a folder <code>confirmed_whale_nft</code>. Open this folder in your preferred code editor. Now open up the file <code>sources/confirmed_whale_nft.move</code>. This is where we will be writing our smart contract. Let's start out by defining the <code>ConfirmedWhaleNFT</code> object that we will be sending to users.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// confirmed_whale_nft.move
+</span><span>module confirmed_whale_nft::confirmed_whale_nft {
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>ConfirmedWhaleNFT has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">owner</span><span>: address
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>This should look pretty familiar if you've ever worked with a typed programming language before. The expression <code>has key</code> let's the MoveVM know that the <code>confirmed_whale_nft</code> is a Move object. Because it's a Move object, its first field needs to be of type <code>UID</code>, which is a globally unique object ID. </p>
+<p>Next, we have to add a way for users to get one of these NFT's. Let's create a function that lets the user do just that. We will need to import a few things from the standard library.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// confirmed_whale_nft.move
+</span><span>module confirmed_whale_nft::confirmed_whale_nft {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::iota::{</span><span style="color:#d08770;">IOTA</span><span>};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::coin::{Coin};
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>ConfirmedWhaleNFT has key {...}
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Send a ConfirmedWhaleNFT to the caller if they send along a coin with at
+</span><span>    </span><span style="color:#65737e;">// least 5 IOTA.
+</span><span>    public fun </span><span style="color:#96b5b4;">confirm_whale</span><span>(coin: Coin&lt;IOTA&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> coin_value_iota = coin.</span><span style="color:#96b5b4;">value</span><span>() / </span><span style="color:#d08770;">1_000_000_000</span><span>;
+</span><span>        </span><span style="color:#b48ead;">let</span><span> caller = ctx.</span><span style="color:#96b5b4;">sender</span><span>();
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(coin_value_iota &gt;= </span><span style="color:#d08770;">5</span><span>) {
+</span><span>            </span><span style="color:#b48ead;">let</span><span> nft = ConfirmedWhaleNFT {
+</span><span>                id: object::new(ctx),
+</span><span>                owner: caller
+</span><span>            };
+</span><span>            transfer::transfer(nft, caller);
+</span><span>        };
+</span><span>        transfer::public_transfer(coin, caller);
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>That's all for now! Simple right? </p>
+<p>A few notes on this code: </p>
+<ul>
+<li>The base unit for IOTA Rebased is a NANO, which is one billionth of an IOTA (i.e. 1 IOTA = 1.000.000.000 NANO). That's why we have to divide the coin value by a billion to get the value in IOTA. </li>
+<li>The <code>object::new(ctx)</code> is used to create a new globally unique object ID for our NFT. This is done at runtime when the transaction is executed. </li>
+<li>There are quite a few modules imported by default, like <code>iota::tx_context</code>, <code>iota::transfer</code>, and <code>iota::object</code>, which is why we can use them without having to import them.</li>
+</ul>
+<p>You can make sure that there are no errors in your code by building your smart contract:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota move build
+</span></code></pre>
+<h2 id="publishing-the-smart-contract">Publishing the smart contract</h2>
+<p>Now that we've written our first smart contract, we will deploy it to the IOTA Rebased testnet, so that we can start seeing our code in action. To get started, we will first add and switch to the testnet environment for our IOTA Client CLI.</p>
+<p>Add the testnet environment:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota client new-env</span><span style="color:#bf616a;"> --alias</span><span>=testnet</span><span style="color:#bf616a;"> --rpc</span><span> https://api.testnet.iota.cafe:443
+</span><span style="color:#bf616a;">Added</span><span> new IOTA env </span><span style="color:#b48ead;">[</span><span>testnet</span><span style="color:#b48ead;">]</span><span> to config.
+</span></code></pre>
+<p>Switching to the newly added testnet environment:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota client switch</span><span style="color:#bf616a;"> --env</span><span> testnet
+</span><span style="color:#bf616a;">Active</span><span> environment switched to </span><span style="color:#b48ead;">[</span><span>testnet</span><span style="color:#b48ead;">]
+</span></code></pre>
+<p>Now, to deploy the smart contract, we'll need some IOTA as gas. We can get some IOTA for free from the testnet faucet by calling: </p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota client faucet
+</span><span style="color:#bf616a;">Request</span><span> successful. It can take up to 1 minute to get the coin. Run iota client gas to check your gas coins.
+</span></code></pre>
+<p>Now, to deploy our smart contract, in the folder <code>confirmed_whale_nft</code>:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota client publish</span><span style="color:#bf616a;"> --gas-budget</span><span> 100000000
+</span></code></pre>
+<p>If everything went well, the above command should print the results of the publishing our package. Under 'Object Changes'-'Published Objects', you should see your package with <code>Modules: confirmed_whale_nft</code> (see image below). <em>Make sure to copy the <code>PackageID</code>, since we will need it later to interact with our smart contract.</em></p>
+<p><img src="https://teunvw14.github.io/posts/iota-rebased-sc/package-id.png" alt="PackageID in command output" /></p>
+<h1 id="creating-a-frontend">Creating a frontend</h1>
+<p>Now, let's create a frontend to interact with our smart contract. We will use <a rel="noopener" target="_blank" href="https://svelte.dev/docs/kit/introduction">Svelte/SvelteKit</a>. The frontend will be very minimal, but it should illustrate how a frontend that interacts with a Move smart contract.</p>
+<h2 id="setup">Setup</h2>
+<p>Let's start by creating the frontend project using <code>npx</code>. The recommended installation options are shown below.</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> npx sv create confirmed_whale_nft_frontend
+</span><span style="color:#bf616a;">◇</span><span>  Which template would you like?
+</span><span style="color:#bf616a;">│</span><span>  SvelteKit minimal
+</span><span style="color:#bf616a;">│
+</span><span style="color:#bf616a;">◇</span><span>  Add type checking with Typescript?
+</span><span style="color:#bf616a;">│</span><span>  Yes, using Typescript syntax
+</span><span style="color:#bf616a;">│
+</span><span style="color:#bf616a;">◆</span><span>  Project created
+</span><span style="color:#bf616a;">│
+</span><span style="color:#bf616a;">◇</span><span>  What would you like to add to your project? (use arrow keys / space bar)
+</span><span style="color:#bf616a;">│</span><span>  tailwindcss
+</span><span style="color:#bf616a;">│
+</span><span style="color:#bf616a;">◇</span><span>  Which plugins would you like to add?
+</span><span style="color:#bf616a;">│</span><span>  none
+</span><span style="color:#bf616a;">│
+</span><span style="color:#bf616a;">◇</span><span>  Which package manager do you want to install dependencies with?
+</span><span style="color:#bf616a;">│</span><span>  npm
+</span><span style="color:#bf616a;">│</span><span>  ...
+</span><span style="color:#bf616a;">└</span><span>  You&#39;</span><span style="color:#a3be8c;">re all set!
+</span><span style="color:#a3be8c;">
+</span><span style="color:#a3be8c;">$ cd confirmed_whale_nft_frontend
+</span></code></pre>
+<p>Let's install some dependencies. We will need the <code>iota-sdk</code> to interact with the IOTA Rebased testnet, and to interact with the smart contract. We will need the Mysten <code>wallet-standard</code> to interact with end-user wallets. </p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> npm install @iota/iota-sdk @mysten/wallet-standard 
+</span></code></pre>
+<p>Now, there's one last thing that we have to do before we can start creating our frontend. Create a component <code>src/lib/ConfirmedWhaleInterface.svelte</code>, and then replace the contents inside <code>src/routes/+page.svelte</code> so that it only holds this component:</p>
+<pre data-lang="html" style="background-color:#2b303b;color:#c0c5ce;" class="language-html "><code class="language-html" data-lang="html"><span style="color:#65737e;">&lt;!-- src/routes/+page.svelte --&gt;
+</span><span>&lt;</span><span style="color:#bf616a;">script</span><span>&gt;
+</span><span>    </span><span style="color:#b48ead;">import </span><span style="color:#bf616a;">ConfirmedWhaleInterface </span><span style="color:#b48ead;">from </span><span>&quot;</span><span style="color:#a3be8c;">$lib/ConfirmedWhaleInterface.svelte</span><span>&quot;;
+</span><span>&lt;/</span><span style="color:#bf616a;">script</span><span>&gt;
+</span><span>
+</span><span>&lt;</span><span style="color:#bf616a;">ConfirmedWhaleInterface </span><span>/&gt;
+</span></code></pre>
+<p>This <code>ConfirmedWhaleInterface</code> component will hold all the HTML and TypeScript for our frontend.</p>
+<h2 id="creating-the-frontend">Creating the frontend</h2>
+<p>To make things easier, make sure to start up a live server.</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">npm</span><span> run dev -- --open
+</span></code></pre>
+<p>Let's start out by defining a few visual components using HTML / Svelte in our <code>ConfirmedWhaleInterface</code>.</p>
+<pre data-lang="html" style="background-color:#2b303b;color:#c0c5ce;" class="language-html "><code class="language-html" data-lang="html"><span style="color:#65737e;">&lt;!-- src/lib/ConfirmedWhaleInterface.svelte --&gt;
+</span><span>
+</span><span>&lt;</span><span style="color:#bf616a;">div </span><span style="color:#d08770;">class</span><span>=&quot;</span><span style="color:#a3be8c;">m-4</span><span>&quot;&gt;
+</span><span>
+</span><span>    &lt;</span><span style="color:#bf616a;">h1</span><span>&gt;
+</span><span>        Welcome to the Confirmed Whale dApp!
+</span><span>    &lt;/</span><span style="color:#bf616a;">h1</span><span>&gt;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">&lt;!-- Button for connecting to an IOTA wallet --&gt;
+</span><span>    &lt;</span><span style="color:#bf616a;">button 
+</span><span>        </span><span style="color:#d08770;">onclick</span><span>=</span><span style="color:#d08770;">{connectWallet}
+</span><span>        </span><span style="color:#d08770;">class</span><span>=&quot;</span><span style="color:#a3be8c;">bg-blue-500 p-2</span><span>&quot;
+</span><span>    &gt;
+</span><span>        {activeWallet ? &#39;Connected&#39; : &#39;Connect wallet&#39;}
+</span><span>    &lt;/</span><span style="color:#bf616a;">button</span><span>&gt;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">&lt;!-- Display for the balance of the active walletAccount --&gt;
+</span><span>    &lt;</span><span style="color:#bf616a;">p</span><span>&gt;{activeWalletAccount ? `Balance: ${activeWalletAccountBalance}` : &#39;Connect a wallet to show balance&#39;}&lt;/</span><span style="color:#bf616a;">p</span><span>&gt;
+</span><span>
+</span><span>    &lt;</span><span style="color:#bf616a;">hr</span><span>/&gt;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">&lt;!-- Input for how many NANOs to send to the smart contract --&gt;
+</span><span>    &lt;</span><span style="color:#bf616a;">h3</span><span>&gt;Send amount (need at least 5000000000 to get ConfirmedWhaleNFT)&lt;/</span><span style="color:#bf616a;">h3</span><span>&gt;
+</span><span>    &lt;</span><span style="color:#bf616a;">input </span><span style="color:#d08770;">bind:value</span><span>=</span><span style="color:#a3be8c;">{sendAmountNanos} </span><span style="color:#d08770;">type</span><span>=&quot;</span><span style="color:#a3be8c;">number</span><span>&quot; </span><span style="color:#d08770;">lang</span><span>=&quot;</span><span style="color:#a3be8c;">en</span><span>&quot; </span><span style="color:#d08770;">step</span><span>=&quot;</span><span style="color:#a3be8c;">1</span><span>&quot;/&gt;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">&lt;!-- Button that allows for interaction with the smart contract --&gt;
+</span><span>    &lt;</span><span style="color:#bf616a;">button 
+</span><span>        </span><span style="color:#d08770;">onclick</span><span>=</span><span style="color:#d08770;">{confirmWhale}
+</span><span>        </span><span style="color:#d08770;">class</span><span>=&quot;</span><span style="color:#a3be8c;">bg-blue-500 p-2</span><span>&quot;
+</span><span>        </span><span style="color:#d08770;">disabled</span><span>=</span><span style="color:#a3be8c;">{!activeWalletAccount}
+</span><span>    &gt;
+</span><span>        {activeWalletAccount ? &quot;call confirm_whale&quot; : &quot;Connect a wallet to interact with smart contract.&quot;}
+</span><span>    &lt;/</span><span style="color:#bf616a;">button</span><span>&gt;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">&lt;!-- Display of the result of the transaction --&gt;
+</span><span>    &lt;</span><span style="color:#bf616a;">p</span><span>&gt;{resultText}&lt;/</span><span style="color:#bf616a;">p</span><span>&gt;
+</span><span>    &lt;</span><span style="color:#bf616a;">a 
+</span><span>        </span><span style="color:#d08770;">href</span><span>=</span><span style="color:#a3be8c;">{explorerUrl} </span><span style="color:#d08770;">target</span><span>=&quot;</span><span style="color:#a3be8c;">_blank</span><span>&quot;
+</span><span>        </span><span style="color:#d08770;">class</span><span>=&quot;</span><span style="color:#a3be8c;">bg-green-300</span><span>&quot;
+</span><span>    &gt;
+</span><span>        {explorerUrl == &quot;&quot; ? &quot;&quot; : &quot;Check out the NFT on the IOTA Rebased explorer&quot;}
+</span><span>    &lt;/</span><span style="color:#bf616a;">a</span><span>&gt;
+</span><span>
+</span><span>&lt;/</span><span style="color:#bf616a;">div</span><span>&gt;
+</span></code></pre>
+<p>The HTML is (hopefully) pretty self-explanatory. Now let's look at the relevant TypeScript and see how the actual logic for interacting with our smart contract is defined. We begin by importing the relevant libraries, defining the relevant constants, and defining the state variables used in our app. Next important thing is to initialize the IOTA Client for the testnet. We will use it to send transactions.</p>
+<pre data-lang="html" style="background-color:#2b303b;color:#c0c5ce;" class="language-html "><code class="language-html" data-lang="html"><span style="color:#65737e;">&lt;!-- src/lib/ConfirmedWhaleInterface.svelte --&gt;
+</span><span>
+</span><span>&lt;</span><span style="color:#bf616a;">script </span><span style="color:#d08770;">lang</span><span>=&quot;</span><span style="color:#a3be8c;">ts</span><span>&quot;&gt;
+</span><span>    </span><span style="color:#b48ead;">import </span><span style="color:#bf616a;">type </span><span>{ </span><span style="color:#bf616a;">Wallet</span><span>, </span><span style="color:#bf616a;">WalletAccount </span><span>} </span><span style="color:#bf616a;">from </span><span>&#39;</span><span style="color:#a3be8c;">@mysten/wallet-standard</span><span>&#39;;
+</span><span>    </span><span style="color:#b48ead;">import </span><span>{ </span><span style="color:#bf616a;">getWallets </span><span>} </span><span style="color:#b48ead;">from </span><span>&#39;</span><span style="color:#a3be8c;">@mysten/wallet-standard</span><span>&#39;;
+</span><span>    </span><span style="color:#b48ead;">import </span><span>{ </span><span style="color:#bf616a;">getFullnodeUrl</span><span>, </span><span style="color:#bf616a;">IotaClient </span><span>} </span><span style="color:#b48ead;">from </span><span>&#39;</span><span style="color:#a3be8c;">@iota/iota-sdk/client</span><span>&#39;;
+</span><span>    </span><span style="color:#b48ead;">import </span><span>{ </span><span style="color:#bf616a;">Transaction </span><span>} </span><span style="color:#b48ead;">from </span><span>&#39;</span><span style="color:#a3be8c;">@iota/iota-sdk/transactions</span><span>&#39;;
+</span><span>    
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">PACKAGE_ID </span><span>= &quot;</span><span style="color:#a3be8c;">YOUR_PACKAGE_ID_HERE</span><span>&quot;;
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">MODULE_NAME </span><span>= &quot;</span><span style="color:#a3be8c;">confirmed_whale_nft</span><span>&quot;;
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">FUNCTION_NAME </span><span>= &quot;</span><span style="color:#a3be8c;">confirm_whale</span><span>&quot;;
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">GAS_BUDGET </span><span>= </span><span style="color:#d08770;">100_000_000</span><span>;
+</span><span>    
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">activeWallet </span><span>= </span><span style="color:#bf616a;">$state</span><span>(</span><span style="color:#d08770;">null</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">activeWalletAccount </span><span>= </span><span style="color:#bf616a;">$state</span><span>(</span><span style="color:#d08770;">null</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">activeWalletAccountBalance </span><span>= </span><span style="color:#bf616a;">$state</span><span>(</span><span style="color:#d08770;">0</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">sendAmountNanos </span><span>= </span><span style="color:#bf616a;">$state</span><span>(</span><span style="color:#d08770;">0</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">resultText </span><span>= </span><span style="color:#bf616a;">$state</span><span>(&quot;&quot;);
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">explorerUrl </span><span>= </span><span style="color:#bf616a;">$state</span><span>(&quot;&quot;);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">iotaClient </span><span>= new </span><span style="color:#bf616a;">IotaClient</span><span>({ url: </span><span style="color:#bf616a;">getFullnodeUrl</span><span>(&#39;</span><span style="color:#a3be8c;">testnet</span><span>&#39;) });
+</span><span>    ...
+</span><span>&lt;/</span><span style="color:#bf616a;">script</span><span>&gt;
+</span></code></pre>
+<p>Make sure you paste your PackageId in <code>PACKAGE_ID</code>. Of interest here may be the hardcoded <code>GAS_BUDGET</code>, set to 0.1 IOTA for simplicity. You can lower this if you want, but if you set the gas budget too low, transactions may fail. </p>
+<p>Additionally, you may wonder what the difference is between a <code>Wallet</code> and a <code>WalletAccount</code>. You can think of a <code>Wallet</code> as any app (browser extension or desktop app) that can manage your assets - and <code>WalletAccounts</code> as the addresses that are managed by a <code>Wallet</code>. A <code>Wallet</code> can have many different <code>WalletAccounts</code>.</p>
+<p>Next, let's see how we can connect to an IOTA wallet.</p>
+<pre data-lang="html" style="background-color:#2b303b;color:#c0c5ce;" class="language-html "><code class="language-html" data-lang="html"><span style="color:#65737e;">&lt;!-- src/lib/ConfirmedWhaleInterface.svelte --&gt;
+</span><span>
+</span><span>&lt;</span><span style="color:#bf616a;">script</span><span>&gt;
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#bf616a;">const iotaClient </span><span>= new </span><span style="color:#bf616a;">IotaClient</span><span>({ url: </span><span style="color:#bf616a;">getFullnodeUrl</span><span>(&#39;</span><span style="color:#a3be8c;">testnet</span><span>&#39;) });
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">async function </span><span style="color:#8fa1b3;">connectWallet</span><span>() {
+</span><span>        </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">wallets </span><span>= </span><span style="color:#bf616a;">getWallets</span><span>().</span><span style="color:#bf616a;">get</span><span>();
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">wallets</span><span>.length == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>            console.</span><span style="color:#96b5b4;">log</span><span>(&quot;</span><span style="color:#a3be8c;">No wallets found to connect to. Make sure you installed an IOTA web wallet.</span><span>&quot;);
+</span><span>            </span><span style="color:#b48ead;">return</span><span>;
+</span><span>        }
+</span><span>        </span><span style="color:#65737e;">// Make sure we get the right wallet
+</span><span>        </span><span style="color:#bf616a;">activeWallet </span><span>= </span><span style="color:#bf616a;">wallets</span><span>.</span><span style="color:#bf616a;">find</span><span>((w) </span><span style="color:#b48ead;">=&gt; </span><span style="color:#bf616a;">w</span><span>.name == &quot;</span><span style="color:#a3be8c;">IOTA Wallet</span><span>&quot;);
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(!</span><span style="color:#bf616a;">activeWallet</span><span>) {
+</span><span>            console.</span><span style="color:#96b5b4;">log</span><span>(&quot;</span><span style="color:#a3be8c;">No IOTA wallets found to connect to. Make sure you installed an IOTA web wallet.</span><span>&quot;);
+</span><span>            </span><span style="color:#b48ead;">return</span><span>;
+</span><span>        }
+</span><span>        </span><span style="color:#bf616a;">activeWallet</span><span>.features[&#39;</span><span style="color:#a3be8c;">standard:connect</span><span>&#39;].</span><span style="color:#bf616a;">connect</span><span>();
+</span><span>        </span><span style="color:#bf616a;">activeWallet</span><span>.features[&#39;</span><span style="color:#a3be8c;">standard:events</span><span>&#39;].</span><span style="color:#bf616a;">on</span><span>(&quot;</span><span style="color:#a3be8c;">change</span><span>&quot;, () </span><span style="color:#b48ead;">=&gt; </span><span>{
+</span><span>            </span><span style="color:#bf616a;">activeWalletAccount </span><span>= </span><span style="color:#bf616a;">activeWallet</span><span>.accounts[</span><span style="color:#d08770;">0</span><span>];
+</span><span>            </span><span style="color:#bf616a;">updateBalance</span><span>();
+</span><span>        });
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Helper function to update the balance of the activeWalletAccount
+</span><span>    </span><span style="color:#b48ead;">async function </span><span style="color:#8fa1b3;">updateBalance</span><span>() {
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">activeWalletAccount</span><span>) {
+</span><span>            </span><span style="color:#bf616a;">activeWalletAccountBalance </span><span>= (</span><span style="color:#b48ead;">await </span><span style="color:#bf616a;">iotaClient</span><span>.</span><span style="color:#bf616a;">getBalance</span><span>({owner: </span><span style="color:#bf616a;">activeWalletAccount</span><span>.address})).totalBalance;
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>    ...
+</span><span>&lt;/</span><span style="color:#bf616a;">script</span><span>&gt;
+</span></code></pre>
+<p>When an error occurs while trying to connect to a wallet, we will just write to the console what went wrong and return. There's are a few things that can go wrong in the process of connecting - in a real dApp you would probably want to do more robust error handling. For now we will keep things simple.</p>
+<p>When we call <code>activeWallet.features['standard:connect'].connect()</code>, the wallet will present the user with the connection request and ask them to approve it. We don't know how long the user will take to approve the request, so we add the event listener that sets <code>activeWalletAccount</code> and updates the balance when any 'change' happens on the wallet. The wallet successfully connecting is such a 'change'. </p>
+<p>Now we're almost done - the only thing left to do is to add the logic for calling our smart contract function. Let's walk through it. </p>
+<p>We will start out by creating the transaction and creating a <code>Coin&lt;IOTA&gt;</code> object by splitting it from the gas <code>Coin</code>. </p>
+<pre data-lang="html" style="background-color:#2b303b;color:#c0c5ce;" class="language-html "><code class="language-html" data-lang="html"><span style="color:#65737e;">&lt;!-- src/lib/ConfirmedWhaleInterface.svelte --&gt;
+</span><span>
+</span><span>&lt;</span><span style="color:#bf616a;">script</span><span>&gt;
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Send a transaction to the smart contract, calling `confirm_whale`.
+</span><span>    </span><span style="color:#b48ead;">async function </span><span style="color:#8fa1b3;">confirmWhale</span><span>() {
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Set up the transaction
+</span><span>        </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">tx </span><span>= new </span><span style="color:#bf616a;">Transaction</span><span>();
+</span><span>        </span><span style="color:#bf616a;">tx</span><span>.</span><span style="color:#bf616a;">setGasBudget</span><span>(</span><span style="color:#bf616a;">GAS_BUDGET</span><span>);
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let </span><span>[</span><span style="color:#bf616a;">coin</span><span>] = </span><span style="color:#bf616a;">tx</span><span>.</span><span style="color:#bf616a;">splitCoins</span><span>(</span><span style="color:#bf616a;">tx</span><span>.gas, [</span><span style="color:#bf616a;">sendAmountNanos</span><span>]);
+</span><span>        </span><span style="color:#bf616a;">tx</span><span>.</span><span style="color:#bf616a;">moveCall</span><span>({
+</span><span>            package: </span><span style="color:#bf616a;">PACKAGE_ID</span><span>,
+</span><span>            module: </span><span style="color:#bf616a;">MODULE_NAME</span><span>,
+</span><span>            function: </span><span style="color:#bf616a;">FUNCTION_NAME</span><span>,
+</span><span>            arguments: [</span><span style="color:#bf616a;">tx</span><span>.</span><span style="color:#bf616a;">object</span><span>(</span><span style="color:#bf616a;">coin</span><span>)],
+</span><span>        });
+</span><span>    }
+</span><span>    ...
+</span><span>&lt;/</span><span style="color:#bf616a;">script</span><span>&gt;
+</span></code></pre>
+<p>The meat of the function is in the <code>tx.moveCall()</code>. This is saying that we want to call the <code>confirm_whale</code> Move function with our <code>coin</code> as an argument. </p>
+<p>Now that we defined what we want the transaction to do, we need the user to sign the transaction with the wallet, so that it can be executed.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#65737e;">// Send a transaction to the smart contract, calling `confirm_whale`.
+</span><span style="color:#b48ead;">async function </span><span style="color:#8fa1b3;">confirmWhale</span><span>() {
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Request the wallet to sign the transaction
+</span><span>    </span><span style="color:#b48ead;">let </span><span>{</span><span style="color:#bf616a;">bytes</span><span>, </span><span style="color:#bf616a;">signature</span><span>} = 
+</span><span>    </span><span style="color:#b48ead;">await </span><span>(</span><span style="color:#bf616a;">activeWallet</span><span>.</span><span style="color:#bf616a;">features</span><span>[&#39;</span><span style="color:#a3be8c;">iota:signTransaction</span><span>&#39;]).</span><span style="color:#8fa1b3;">signTransaction</span><span>({
+</span><span>        transaction: </span><span style="color:#bf616a;">tx</span><span>, 
+</span><span>        account: </span><span style="color:#bf616a;">activeWalletAccount</span><span>,
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Send signed transaction to the network for execution
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">transactionResult </span><span>= </span><span style="color:#b48ead;">await </span><span style="color:#bf616a;">iotaClient</span><span>.</span><span style="color:#8fa1b3;">executeTransactionBlock</span><span>({
+</span><span>        transactionBlock: </span><span style="color:#bf616a;">bytes</span><span>,
+</span><span>        signature: </span><span style="color:#bf616a;">signature</span><span>,
+</span><span>    })
+</span><span>}
+</span></code></pre>
+<p>Here again, in a real dApp you would probably want to add proper error handling. For example, the user refusing to sign the transaction should be handled gracefully. But that's outside the scope of this article.</p>
+<p>The last part of this function deals with the result of executing the transaction. We will have to wait for the transaction to be final on the network, after which we can get the relevant <code>transactionBlock</code> using the transaction digest. The last part of the code makes sure that the result of the transaction is shown to the user. The <code>explorerUrl</code> is updated so that a link to the created <code>ConfirmedWhaleNFT</code> is shown.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#65737e;">// Send a transaction to the smart contract, calling `confirm_whale`.
+</span><span style="color:#b48ead;">async function </span><span style="color:#8fa1b3;">confirmWhale</span><span>() {
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Wait for transaction to complete and parse results
+</span><span>    </span><span style="color:#b48ead;">await </span><span style="color:#bf616a;">iotaClient</span><span>.</span><span style="color:#8fa1b3;">waitForTransaction</span><span>({ digest: </span><span style="color:#bf616a;">transactionResult</span><span>.</span><span style="color:#bf616a;">digest </span><span>});
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">transactionBlock </span><span>= </span><span style="color:#b48ead;">await </span><span style="color:#bf616a;">iotaClient</span><span>.</span><span style="color:#8fa1b3;">getTransactionBlock</span><span>({
+</span><span>        digest: </span><span style="color:#bf616a;">transactionResult</span><span>.</span><span style="color:#bf616a;">digest</span><span>,
+</span><span>        options: {
+</span><span>            showEffects: </span><span style="color:#d08770;">true</span><span>,
+</span><span>            showObjectChanges: </span><span style="color:#d08770;">true</span><span>,
+</span><span>        }
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Show transaction results, if the transaction was successful
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">transactionBlock</span><span>.</span><span style="color:#bf616a;">effects</span><span>?.status.status == &#39;</span><span style="color:#a3be8c;">success</span><span>&#39;){
+</span><span>        </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">confirmedWhaleNftCreated </span><span>= </span><span style="color:#bf616a;">transactionBlock</span><span>.</span><span style="color:#bf616a;">objectChanges</span><span>?.</span><span style="color:#96b5b4;">find</span><span>((</span><span style="color:#bf616a;">change</span><span>) </span><span style="color:#b48ead;">=&gt; </span><span>{
+</span><span>            </span><span style="color:#b48ead;">return </span><span style="color:#bf616a;">change</span><span>.</span><span style="color:#bf616a;">objectType</span><span>.</span><span style="color:#8fa1b3;">endsWith</span><span>(&quot;</span><span style="color:#a3be8c;">::confirmed_whale_nft::ConfirmedWhaleNFT</span><span>&quot;)
+</span><span>        });
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">confirmedWhaleNftCreated</span><span>) {
+</span><span>            </span><span style="color:#bf616a;">resultText </span><span>= `</span><span style="color:#a3be8c;">Transaction success! ConfirmedWhaleNFT was created with id ${</span><span style="color:#bf616a;">confirmedWhaleNftCreated</span><span style="color:#a3be8c;">.</span><span style="color:#bf616a;">objectId</span><span style="color:#a3be8c;">}.</span><span>`;
+</span><span>            </span><span style="color:#bf616a;">explorerUrl </span><span>= `</span><span style="color:#a3be8c;">https://explorer.rebased.iota.org/object/${</span><span style="color:#bf616a;">confirmedWhaleNftCreated</span><span style="color:#a3be8c;">.</span><span style="color:#bf616a;">objectId</span><span style="color:#a3be8c;">}</span><span>`;
+</span><span>        } </span><span style="color:#b48ead;">else </span><span>{
+</span><span>            </span><span style="color:#bf616a;">resultText </span><span>= &quot;</span><span style="color:#a3be8c;">Transaction succeeded, but ConfirmedWhaleNFT was not created.</span><span>&quot;;
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>That's it! Our smart contract with frontend is now complete. Your frontend should look something like this:</p>
+<p><img src="https://teunvw14.github.io/posts/iota-rebased-sc/confirmed-whale-frontend.png" alt="ConfirmedWhaleNFT Frontend" /></p>
+<p>Of course there are a bunch of things that could be improved: the frontend design, improved smart contract functionality, error handling, testing, etc.. But that's for another article. </p>
+<p>For now, I hope that you learned something and are ready to write your own dApps. If you want to continue learning, consider taking a look at <a href="../iota-move-raffle-tutorial/">this article</a>, which will show you how to create a raffle smart contract with Move. </p>
+<p>Thanks for reading!</p>
+<p>For the full code, check out the <a rel="noopener" target="_blank" href="https://github.com/teunvw14/iota-rebased-sc-minimal-example">accompanying github repository</a>.</p>
+
+        </section>
+
+        
+
+    </article>
+</main>
+
+
+
+        <footer>
+  <div style="display:flex">
+    
+        <a class="soc" href=https:&#x2F;&#x2F;github.com&#x2F;teunvw14 title=GitHub>
+            <i data-feather=github></i>
+        </a>
+    
+        <a class="soc" href=https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;teun-van-wezel&#x2F; title=LinkedIn>
+            <i data-feather=linkedin></i>
+        </a>
+    
+  </div>
+  <div class="footer-info">
+    2026 © Teun van Wezel | Built with <a href="https://www.getzola.org/">Zola</a> / <a
+      href="https://github.com/XXXMrG/archie-zola">Archie-Zola Theme</a>
+  </div>
+</footer>
+
+
+<script>
+    feather.replace();
+</script>
+
+
+    </div>
+</body>
+
+</html>

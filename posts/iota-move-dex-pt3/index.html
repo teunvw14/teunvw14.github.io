@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+
+    
+        <title>
+             Move on IOTA Rebased: Building a Decentralized Exchange Smart Contract. Part 3: Testing
+            
+        </title>
+
+        
+            <meta property="og:title" content="Move on IOTA Rebased: Building a Decentralized Exchange Smart Contract. Part 3: Testing" />
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+         <link rel="icon" type="image/png" href=&#x2F;icon&#x2F;favicon.png />
+    
+
+    
+
+    
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4SM5P4FCHX"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-4SM5P4FCHX');
+        </script>
+    
+
+    
+    
+        <script src=https://teunvw14.github.io/js/feather.min.js></script>
+    
+
+
+    
+        <link href=https://teunvw14.github.io/css/fonts.css rel="stylesheet" />
+    
+
+    <link rel="stylesheet" type="text/css" media="screen" href=https://teunvw14.github.io/css/main.css />
+
+    
+        <link
+            rel="stylesheet"
+            id="darkModeStyle"
+            type="text/css"
+            href=https://teunvw14.github.io/css/dark.css
+            
+            
+                disabled
+            
+        />
+    
+
+    
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+    
+
+
+    
+
+
+</head>
+
+
+<body>
+    <div class="content">
+        <header>
+    
+    <div class="main" id="main_title">
+        <img src="../../favicon_hires.png" style="max-height: 24px; margin-right: 8px;"/>
+        <a href=https:&#x2F;&#x2F;teunvw14.github.io>Teun van Wezel&#x27;s Tech Blog</a>
+    </div>
+    
+    <nav>
+        
+            <a href=&#x2F;>Blog</a>
+        
+            <a href=&#x2F;posts>All posts</a>
+        
+
+        
+            |
+
+            
+                <a href=&#x2F;>en</a>
+            
+        
+
+        
+            | <a id="dark-mode-toggle" onclick="toggleTheme()" href=""></a>
+            <script src=https://teunvw14.github.io/js/themetoggle.js></script>
+        
+    </nav>
+</header>
+
+
+        
+    
+<main>
+    <article>
+        <div class="title">
+            <h1 class="title">Move on IOTA Rebased: Building a Decentralized Exchange Smart Contract. Part 3: Testing</h1>
+            <div class="meta">
+                
+                on  2025-12-31
+
+                
+            </div>
+        </div>
+
+        
+
+        <section class="body">
+            <h1 id="introduction">Introduction</h1>
+<p>This article is the last article in a three-part series on creating a decentralized exchange with Move. Make sure you've read the previous articles before diving into this one:</p>
+<ul>
+<li><a href="../iota-move-dex-pt1/"><em>Part 1: Liquidity Book Pools</em></a></li>
+<li><a href="../iota-move-dex-pt2/">Part 2: Liquidity Providers and Fees</a></li>
+</ul>
+<p>For complex smart contracts (such as the DEX we have built), it can be hard to know for sure whether your code does exactly what you want it to do - that is, unless you set up a good suite of tests. In this article, we will discuss some of the more intermediate Move testing concepts to do exactly that.</p>
+<p>Since our DEX requires some advanced tests, we will discuss testing basics very briefly, and move on to the more advanced concepts quickly. Though they are generally pretty intuitive (especially if you've written tests before, in any language), it may be useful to check out some basic tutorials first if you're not familiar. One excellent resource would be the <a rel="noopener" target="_blank" href="https://docs.iota.org/developer/getting-started/build-test">IOTA Move docs</a>.</p>
+<h2 id="acknowledgements">Acknowledgements</h2>
+<p><em>Many thanks to <a rel="noopener" target="_blank" href="https://iotalabs.io/">iotalabs</a> for supporting this article series with a grant.</em></p>
+<h1 id="why-elaborate-testing-is-good">Why Elaborate Testing is Good</h1>
+<p>Building smart contracts is serious business. Unlike in traditional software, bugs in smart contracts are almost never &quot;non-critical&quot;. That is, they usually have devastating effects: a bug can result in some or all users losing funds. Note that also unlike in traditional software, a bug cannot be patched. There's no way to &quot;unpublish&quot; a smart contract. If your smart contract has built up a user base, and someone finds a bug or exploit, you are in big trouble. Even if you're lucky, and no funds are lost, each user would have to manually unlock their funds from the buggy smart contract - with a massive dent in their trust of the smart contract developer as a result. And that is why it is crucial that you test your smart contracts.</p>
+<p>Note that, if you really intend on building up a user base for your smart contract, you should have a third party audit your code to largely diminish the chance of your code containing serious bugs.</p>
+<h1 id="using-test-scenario-writing-our-first-test">Using <code>test_scenario</code>: Writing Our First Test</h1>
+<p>Let's get to writing a first test for our DEX. We will keep it simple to start: create a pool, provide liquidity to it, and then withdraw the liquidity. You should already have a <code>tests</code> folder in your project directory. Inside it, create <code>liquidity_book_tests.move</code>, and start by defining all the imports that we need. (Each import is annotated with a comment to explain why it is necessary.)</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// tests/liquidity_book_tests.move
+</span><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>module liquidity_book::liquidity_book_tests {
+</span><span>    </span><span style="color:#65737e;">// IOTA test imports
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::test_scenario as ts;
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::test_utils::assert_eq;
+</span><span>    </span><span style="color:#65737e;">// IOTA Framework imports
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::coin::{</span><span style="color:#b48ead;">Self</span><span>, Coin};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::clock::{</span><span style="color:#b48ead;">Self</span><span>, Clock};
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Our smart contract code
+</span><span>    </span><span style="color:#b48ead;">use </span><span>liquidity_book::liquidity_book::{
+</span><span>        </span><span style="color:#b48ead;">Self</span><span>,
+</span><span>        Pool,
+</span><span>        LiquidityProviderReceipt,
+</span><span>        get_fee
+</span><span>    };
+</span><span>    </span><span style="color:#b48ead;">use </span><span>liquidity_book::ufp256::{</span><span style="color:#b48ead;">Self</span><span>};
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Structs for the two different `Coin` types in our Pool
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>LEFT has drop {}
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>RIGHT has drop {}
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Default pool parameter values 
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">20</span><span>;
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">20</span><span>;
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>: u256 = </span><span style="color:#d08770;">5000000000000000000</span><span>; </span><span style="color:#65737e;">// 0.5
+</span><span>    </span><span style="color:#65737e;">// Basis point multiplier constant (i.e. one basis point)
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">ONE_BPS</span><span>: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">10000</span><span>;
+</span><span>}
+</span></code></pre>
+<p>Now let's get started writing the liquidity provision test. You will see that as we write the test, there are quite a lot of steps involved in setting and handling the testing environment. For this first test, we will write out all the steps. It's important to see all the required steps once. However, after writing this first test, we will extract most of the boilerplate into reusable functions. </p>
+<p>Now, the first step in setting up the simple LP test is creating a new LB <code>Pool</code>. Define a function as shown below, using the <code>#[test]</code> annotation to let the Move compiler know that this code needs to be run as a test. (This also means that the code will not be part of the smart contract code when it's published). </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// tests/liquidity_book_tests.move
+</span><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">provide_liquidity_and_withdraw_single</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> pool_creator = @</span><span style="color:#d08770;">0xABCDEF</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> lp_addr = @</span><span style="color:#d08770;">0xA</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = ts::begin(pool_creator);
+</span><span>    {
+</span><span>        liquidity_book::new&lt;LEFT, RIGHT&gt;(
+</span><span>            </span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>,
+</span><span>            </span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>,
+</span><span>            </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>,
+</span><span>            ts.</span><span style="color:#96b5b4;">ctx</span><span>()
+</span><span>        );
+</span><span>    };
+</span><span>    </span><span style="color:#65737e;">// Next transaction so that the creation of the pool takes effect
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(lp_addr);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Create Clock required for the call `provide_liquidity`
+</span><span>    </span><span style="color:#b48ead;">let</span><span> clock = clock::create_for_testing(ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>}
+</span></code></pre>
+<p>What we see here is the starting of the test scenario (with <code>ts::begin</code>). The <code>test_scenario</code> (<code>ts</code>) module helps us write tests by executing our smart contract code in a sequence of transactions (as would happen when our smart contract is published onto the network). It's important to note that ledger changes - most important of which the transfer of objects - don't take effect until a transaction ends, and the only way to do that is by starting a new transaction. With each new transaction, we need to specify who is signing that transaction, which is why <code>ts::begin</code> takes an address, as will <code>ts::next_tx</code>, which we will call to start each new transaction (and end the current one). We don't need to use real addresses, <code>test_scenario</code> lets us use placeholders (like <code>@0xA</code>). </p>
+<p>Finally, note that the call to <code>liquidity_book::new</code> is surrounded by brackets <code>{}</code>. We will keep doing this for each new transaction; it's not strictly necessary, but it's good practice because it ensures that each transaction has its own separate scope. That way, you can be sure that two transactions don't accidentally interact somehow. </p>
+<p>Let's continue writing the test. We create a new transaction by calling <code>ts.next_tx</code> (using <code>lp_addr</code>, the liquidity provider's address), create <code>LEFT</code> and <code>RIGHT</code> <code>Coin</code>s, and then provide them as liquidity to the pool. We can use <code>ts.take_shared</code> to get the liquidity pool from the testing scenario's object ledger. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fun </span><span style="color:#96b5b4;">provide_liquidity_and_withdraw_single</span><span>() {
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_amount = </span><span style="color:#d08770;">10 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_amount = </span><span style="color:#d08770;">10 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_count = </span><span style="color:#d08770;">11</span><span>; </span><span style="color:#65737e;">// Doesn&#39;t really matter here
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> pool = ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Provide liquidity and immediately withdraw
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(lp_addr);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> coin_left = coin::mint_for_testing&lt;LEFT&gt;(left_amount, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>        </span><span style="color:#b48ead;">let</span><span> coin_right = coin::mint_for_testing&lt;RIGHT&gt;(right_amount, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>    
+</span><span>        pool.</span><span style="color:#96b5b4;">provide_liquidity_uniformly</span><span>(
+</span><span>            bin_count,
+</span><span>            coin_left,
+</span><span>            coin_right,
+</span><span>            &amp;clock,
+</span><span>            ts.</span><span style="color:#96b5b4;">ctx</span><span>()
+</span><span>        );
+</span><span>    };
+</span><span>}
+</span></code></pre>
+<p>That's the most crucial part of the test done. To complete the test, we now need to use the <code>LiquidityProviderReceipt</code> that the <code>lp_addr</code> received to withdraw the liquidity. After withdrawal, we can check if the amounts are correct. To get the receipt, we will use another function from the <code>test_scenario</code> module: <code>take_from_address</code>. This function lets you take the most recently received object of a particular type from an address (in this case the liquidity provider's address). </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fun </span><span style="color:#96b5b4;">provide_liquidity_and_withdraw_single</span><span>() {
+</span><span>    ...
+</span><span>
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(lp_addr);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> receipt = ts.take_from_address&lt;LiquidityProviderReceipt&gt;(lp_addr);
+</span><span>        pool.</span><span style="color:#96b5b4;">withdraw_liquidity</span><span>(receipt, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>    };
+</span><span>
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(lp_addr);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> withdrawn_coin_left = ts.take_from_address&lt;Coin&lt;LEFT&gt;&gt;(lp_addr);
+</span><span>        </span><span style="color:#b48ead;">let</span><span> withdrawn_coin_right = ts.take_from_address&lt;Coin&lt;RIGHT&gt;&gt;(lp_addr);
+</span><span>        </span><span style="color:#96b5b4;">assert_eq</span><span>(withdrawn_coin_left.</span><span style="color:#96b5b4;">value</span><span>(), left_amount);
+</span><span>        </span><span style="color:#96b5b4;">assert_eq</span><span>(withdrawn_coin_right.</span><span style="color:#96b5b4;">value</span><span>(), right_amount);
+</span><span>    };
+</span><span>}
+</span></code></pre>
+<p>Transaction effects don't become visible until the next transaction. That's why it's necessary to call <code>ts.next_tx(address)</code> every time we need to use some effect of the previous transaction. You can see that in this example: We cannot perform the liquidity provision and withdrawal in the same transaction, because we cannot access the <code>LiquidityProviderReceipt</code> until the liquidity provision transaction is completed.</p>
+<p>To wrap up the test, we need to return the coins that we took from the liquidity provider's address, and return the <code>pool</code> shared object to the object ledger. Finally, we end the test scenario, and destroy the <code>Clock</code> object. (These last two steps are necessary because <code>Scenario</code> and <code>Clock</code> are both non-drop types, so without them, the test will not compile.)</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fun </span><span style="color:#96b5b4;">provide_liquidity_and_withdraw_single</span><span>() {
+</span><span>    ...
+</span><span>
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(lp_addr);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> withdrawn_coin_left = ts.take_from_address&lt;Coin&lt;LEFT&gt;&gt;(lp_addr);
+</span><span>        </span><span style="color:#b48ead;">let</span><span> withdrawn_coin_right = ts.take_from_address&lt;Coin&lt;RIGHT&gt;&gt;(lp_addr);
+</span><span>        </span><span style="color:#96b5b4;">assert_eq</span><span>(withdrawn_coin_left.</span><span style="color:#96b5b4;">value</span><span>(), left_amount);
+</span><span>        </span><span style="color:#96b5b4;">assert_eq</span><span>(withdrawn_coin_right.</span><span style="color:#96b5b4;">value</span><span>(), right_amount);
+</span><span>        </span><span style="color:#65737e;">// Return to address
+</span><span>        ts::return_to_address(lp_addr, withdrawn_coin_left);
+</span><span>        ts::return_to_address(lp_addr, withdrawn_coin_right);
+</span><span>    };
+</span><span>
+</span><span>    ts::return_shared(pool);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Destroy non-drop objects
+</span><span>    ts.</span><span style="color:#96b5b4;">end</span><span>();
+</span><span>    clock.</span><span style="color:#96b5b4;">destroy_for_testing</span><span>();
+</span><span>}
+</span></code></pre>
+<p>And that's it! If everything went well, we should now be able to run this test and see that it passes:</p>
+<p><img src="https://teunvw14.github.io/posts/iota-move-dex-pt3/successful-test.png" alt="successfulltest" /></p>
+<h1 id="some-first-test-helper-functions">Some First Test Helper Functions</h1>
+<p>As mentioned above, writing just this one test involved a lot of boilerplate. We will see that there are a lot of common actions in the tests: We need to create a pool and provide liquidity to it. We will also need to withdraw liquidity and check the received amounts for multiple of the tests. It will make things a lot simpler if we write a few functions to execute these common actions, drastically reducing code duplication.</p>
+<p>We'll go over quite a few helper functions here, but don't fret. These will for the most part be very simple. A large part of them come down to abstracting away the logic of accessing the <code>Pool</code>. This is possible because all tests will be conducted on exactly one <code>Pool</code> (with just one exception we will discuss at the end of this article).</p>
+<p>To start off, let's create a function that sets up a <code>test_scenario</code> and creates a pool. In <code>tests/liquidity_book_tests.move</code>, add the following code:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// tests/liquidity_book_tests.move
+</span><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">scenario_default_pool</span><span>(): ts::Scenario {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> placeholder_addr = @</span><span style="color:#d08770;">0xABCDEF</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = ts::begin(placeholder_addr);
+</span><span>    {
+</span><span>        liquidity_book::new&lt;LEFT, RIGHT&gt;(
+</span><span>            </span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>,
+</span><span>            </span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>,
+</span><span>            </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>,
+</span><span>            ts.</span><span style="color:#96b5b4;">ctx</span><span>()
+</span><span>        );
+</span><span>    };
+</span><span>    </span><span style="color:#65737e;">// Return the Scenario because we will need it to execute all further 
+</span><span>    </span><span style="color:#65737e;">// transactions
+</span><span>    ts 
+</span><span>}
+</span></code></pre>
+<p>Note that this function is annotated with <code>#[test_only]</code>. We will annotate all test helper functions this way to ensure that these functions only compile when running tests. Otherwise, testing code can unintentionally get mixed up into your non-testing code - where it doesn't belong (this can happen quite easily if you combine functional code and test code in one file). </p>
+<p>Let's also create a wrapper of this function which also adds liquidity to the created <code>Pool</code>:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">scenario_default_pool_with_liquidity</span><span>(sender: address, bin_count: </span><span style="color:#b48ead;">u64</span><span>, left_amount: </span><span style="color:#b48ead;">u64</span><span>, right_amount: </span><span style="color:#b48ead;">u64</span><span>): (ts::Scenario, Clock) {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = </span><span style="color:#96b5b4;">scenario_default_pool</span><span>();
+</span><span>    </span><span style="color:#b48ead;">let</span><span> clock = clock::create_for_testing(ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(sender);
+</span><span>    {
+</span><span>        </span><span style="color:#96b5b4;">provide_liquidity</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, sender, left_amount, right_amount, bin_count, &amp;clock);
+</span><span>    };
+</span><span>    (ts, clock)
+</span><span>}
+</span></code></pre>
+<p>Something else we will have to do in basically every test is ending the scenario <code>ts</code> and destroying the <code>Clock</code>. Let's make a function: </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts: ts::Scenario, clock: Clock) {
+</span><span>    ts.</span><span style="color:#96b5b4;">end</span><span>();
+</span><span>    clock.</span><span style="color:#96b5b4;">destroy_for_testing</span><span>();
+</span><span>}
+</span></code></pre>
+<p>Next, let's create a function for withdrawing an address's provided liquidity. In some cases we will have a <code>LiquidityProviderReceipt</code>, in some case we will not. To accommodate these two cases, we will create <code>withdraw_liquidity_with_receipt</code> which requires a receipt, and then create a wrapper <code>withdraw_liquidity</code> which wraps that function, getting the receipt from the sending address automatically. Here's the code:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">withdraw_liquidity_with_receipt</span><span>(
+</span><span>    ts: &amp;</span><span style="color:#b48ead;">mut </span><span>ts::Scenario,
+</span><span>    sender: address,
+</span><span>    receipt: LiquidityProviderReceipt
+</span><span>): (Coin&lt;LEFT&gt;, Coin&lt;RIGHT&gt;) {
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(sender);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> pool = ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let </span><span>(coin_left, coin_right) = pool.</span><span style="color:#96b5b4;">withdraw_liquidity</span><span>(receipt, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>        ts::return_shared(pool);
+</span><span>        (coin_left, coin_right)
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">withdraw_liquidity</span><span>(
+</span><span>    ts: &amp;</span><span style="color:#b48ead;">mut </span><span>ts::Scenario,
+</span><span>    sender: address
+</span><span>): (Coin&lt;LEFT&gt;, Coin&lt;RIGHT&gt;) {
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(sender);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> receipt = ts.take_from_address&lt;LiquidityProviderReceipt&gt;(sender);
+</span><span>
+</span><span>        </span><span style="color:#96b5b4;">withdraw_liquidity_with_receipt</span><span>(ts, sender, receipt)
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Note that there's not really any other reason to withdraw liquidity than to test whether the liquidity provider receives the right amount. So, let's create a function that combines withdrawal (reusing the function we created above) with checking the coin values. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">withdraw_and_check_coin_values</span><span>(
+</span><span>    ts: &amp;</span><span style="color:#b48ead;">mut </span><span>ts::Scenario,
+</span><span>    sender: address,
+</span><span>    expected_left_value: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    expected_right_value: </span><span style="color:#b48ead;">u64
+</span><span>) {
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(sender);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let </span><span>(coin_left, coin_right) = </span><span style="color:#96b5b4;">withdraw_liquidity</span><span>(ts, sender);
+</span><span>        </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_left.</span><span style="color:#96b5b4;">value</span><span>(), expected_left_value);
+</span><span>        </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_right.</span><span style="color:#96b5b4;">value</span><span>(), expected_right_value);
+</span><span>
+</span><span>        ts::return_to_address(sender, coin_left);
+</span><span>        ts::return_to_address(sender, coin_right);
+</span><span>    };
+</span><span>}
+</span></code></pre>
+<p>For providing liquidity, we will use the same method to handle the case where we want to have the receipt returned, and the case where we don't:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">provide_liquidity_receipt</span><span>(
+</span><span>    ts: &amp;</span><span style="color:#b48ead;">mut </span><span>ts::Scenario,
+</span><span>    sender: address,
+</span><span>    left_amount: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    right_amount: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    bin_count: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    clock: &amp;Clock
+</span><span>): LiquidityProviderReceipt {
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(sender);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> coin_left = coin::mint_for_testing&lt;LEFT&gt;(left_amount, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>        </span><span style="color:#b48ead;">let</span><span> coin_right = coin::mint_for_testing&lt;RIGHT&gt;(right_amount, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> pool = ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> receipt = pool.</span><span style="color:#96b5b4;">provide_liquidity_uniformly</span><span>(
+</span><span>            bin_count,
+</span><span>            coin_left,
+</span><span>            coin_right,
+</span><span>            clock,
+</span><span>            ts.</span><span style="color:#96b5b4;">ctx</span><span>()
+</span><span>        );
+</span><span>
+</span><span>        ts::return_shared(pool);
+</span><span>        receipt
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span style="color:#65737e;">// Function wrapping `provide_liquidity_receipt`
+</span><span style="color:#65737e;">// Adds transfer of receipt to `sender`
+</span><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">provide_liquidity</span><span>(
+</span><span>    ts: &amp;</span><span style="color:#b48ead;">mut </span><span>ts::Scenario,
+</span><span>    sender: address, 
+</span><span>    left_amount: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    right_amount: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    bin_count: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    clock: &amp;Clock
+</span><span>) {
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(sender);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> receipt = </span><span style="color:#96b5b4;">provide_liquidity_receipt</span><span>(
+</span><span>            ts,
+</span><span>            sender,
+</span><span>            left_amount, 
+</span><span>            right_amount,
+</span><span>            bin_count,
+</span><span>            clock
+</span><span>        );
+</span><span>        transfer::public_transfer(receipt, sender);
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>We're almost done with the helper functions now. Let's add some functions to simplify executing a swap in the most recently created pool:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_ltr</span><span>(
+</span><span>    ts: &amp;</span><span style="color:#b48ead;">mut </span><span>ts::Scenario,
+</span><span>    sender: address,
+</span><span>    coin_amount: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    clock: &amp;Clock
+</span><span>): Coin&lt;RIGHT&gt; {
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(sender);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> coin_left = coin::mint_for_testing&lt;LEFT&gt;(coin_amount, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> pool = ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>        </span><span style="color:#b48ead;">let</span><span> coin_right = pool.</span><span style="color:#96b5b4;">swap_ltr</span><span>(coin_left, clock, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>        ts::return_shared(pool);
+</span><span>        coin_right
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>In a few tests, we will not be interested in the output of a swap. To avoid having to deal with the returned coin, we create a wrapper for <code>swap_ltr</code> that sends the coin result to the transaction sender:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_ltr_and_transfer</span><span>(
+</span><span>    ts: &amp;</span><span style="color:#b48ead;">mut </span><span>ts::Scenario,
+</span><span>    sender: address,
+</span><span>    coin_amount: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    clock: &amp;Clock
+</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right = </span><span style="color:#96b5b4;">swap_ltr</span><span>(ts, sender, coin_amount, clock);
+</span><span>    transfer::public_transfer(coin_right, sender);
+</span><span>}
+</span></code></pre>
+<p>Now finally, we create the same functions for <code>swap_rtl</code>, simply replacing <code>pool.swap_ltr</code> with <code>pool.swap_rtl</code>:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_rtl</span><span>(
+</span><span>    ts: &amp;</span><span style="color:#b48ead;">mut </span><span>ts::Scenario,
+</span><span>    sender: address,
+</span><span>    coin_amount: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    clock: &amp;Clock
+</span><span>): Coin&lt;LEFT&gt; {
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(sender);
+</span><span>    {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> coin_right = coin::mint_for_testing&lt;RIGHT&gt;(coin_amount, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>        
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> pool = ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>        </span><span style="color:#b48ead;">let</span><span> coin_left = pool.</span><span style="color:#96b5b4;">swap_rtl</span><span>(coin_right, clock, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>        ts::return_shared(pool);
+</span><span>        coin_left
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_rtl_and_transfer</span><span>(
+</span><span>    ts: &amp;</span><span style="color:#b48ead;">mut </span><span>ts::Scenario,
+</span><span>    sender: address,
+</span><span>    coin_amount: </span><span style="color:#b48ead;">u64</span><span>, 
+</span><span>    clock: &amp;Clock
+</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left = </span><span style="color:#96b5b4;">swap_rtl</span><span>(ts, sender, coin_amount, clock);
+</span><span>    transfer::public_transfer(coin_left, sender);
+</span><span>}
+</span></code></pre>
+<p>Alright, that's it for the helper functions. </p>
+<h2 id="simplifying-our-first-test">Simplifying Our First Test</h2>
+<p>Before we move onto writing other tests, we should simplify our first test. With all our new helper functions, it reduces to:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">provide_liquidity_and_withdraw_single</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = </span><span style="color:#96b5b4;">scenario_default_pool</span><span>();
+</span><span>    </span><span style="color:#b48ead;">let</span><span> lp_addr = @</span><span style="color:#d08770;">0xA</span><span>;
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_amount = </span><span style="color:#d08770;">10 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_amount = </span><span style="color:#d08770;">10 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_count = </span><span style="color:#d08770;">11</span><span>; </span><span style="color:#65737e;">// Doesn&#39;t really matter here
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> clock = clock::create_for_testing(ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Provide liquidity and immediately withdraw
+</span><span>    </span><span style="color:#96b5b4;">provide_liquidity</span><span>(
+</span><span>        &amp;</span><span style="color:#b48ead;">mut</span><span> ts,
+</span><span>        lp_addr,
+</span><span>        left_amount,
+</span><span>        right_amount,
+</span><span>        bin_count, 
+</span><span>        &amp;clock
+</span><span>    );
+</span><span>    </span><span style="color:#96b5b4;">withdraw_and_check_coin_values</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, lp_addr, left_amount, right_amount);
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts, clock);
+</span><span>}
+</span></code></pre>
+<p>That does save a <em>lot</em> of lines. As we write more tests, we'll see that abstracting away all that logic was all the more worth our effort. </p>
+<h1 id="testing-for-the-liquidity-provider-supplying-withdrawing-and-earning-fees">Testing for The Liquidity Provider: Supplying, Withdrawing and Earning Fees</h1>
+<p>In this section, we will create tests from the perspective of the liquidity provider. We will look at a variety of different scenarios to make sure that providing and withdrawing, as well as earning fees, works as expected.</p>
+<h2 id="no-fees-multiple-liquidity-providers">No Fees: Multiple Liquidity Providers</h2>
+<p>Let's expand on our first test by writing a test with multiple liquidity providers. Start by defining a test and setting up the required context:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">provide_liquidity_and_withdraw_plural</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = </span><span style="color:#96b5b4;">scenario_default_pool</span><span>();
+</span><span>    </span><span style="color:#b48ead;">let</span><span> clock = clock::create_for_testing(ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Define parameters
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_count = </span><span style="color:#d08770;">11</span><span>; </span><span style="color:#65737e;">// Doesn&#39;t really matter
+</span><span>    </span><span style="color:#b48ead;">let</span><span> lp_addrs = vector[@</span><span style="color:#d08770;">0xA</span><span>, @</span><span style="color:#d08770;">0xB</span><span>, @</span><span style="color:#d08770;">0xC</span><span>, @</span><span style="color:#d08770;">0xD</span><span>, @</span><span style="color:#d08770;">0xE</span><span>];
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_amounts = vector[</span><span style="color:#d08770;">2</span><span>, </span><span style="color:#d08770;">4</span><span>, </span><span style="color:#d08770;">6</span><span>, </span><span style="color:#d08770;">8</span><span>, </span><span style="color:#d08770;">10</span><span>];
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_amounts = vector[</span><span style="color:#d08770;">1</span><span>, </span><span style="color:#d08770;">3</span><span>, </span><span style="color:#d08770;">5</span><span>, </span><span style="color:#d08770;">7</span><span>, </span><span style="color:#d08770;">9</span><span>];
+</span><span>}
+</span></code></pre>
+<p>Here, we first see the use of <code>vector</code>. These can be used to define lists of a single datatype. We define a <code>vector</code> of addresses of the liquidity providers and the provision amounts for each of those addresses. (It's not really important which amounts you let each LP provide. (The amounts shown here are basically random). </p>
+<p>The rest of the test is pretty straightforward: we make all of the LP's provide liquidity, and then make all of them withdraw.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fun </span><span style="color:#96b5b4;">provide_liquidity_and_withdraw_plural</span><span>() {
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// First provide all liquidity
+</span><span>    lp_addrs.</span><span style="color:#96b5b4;">length</span><span>().</span><span style="background-color:#bf616a;color:#2b303b;">do</span><span>!(|</span><span style="color:#bf616a;">i</span><span>| {
+</span><span>        </span><span style="color:#96b5b4;">provide_liquidity</span><span>(
+</span><span>            &amp;</span><span style="color:#b48ead;">mut</span><span> ts,
+</span><span>            lp_addrs[i],
+</span><span>            left_amounts[i],
+</span><span>            right_amounts[i],
+</span><span>            bin_count,
+</span><span>            &amp;clock
+</span><span>        );
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Withdraw and verify amounts
+</span><span>    lp_addrs.</span><span style="color:#96b5b4;">length</span><span>().</span><span style="background-color:#bf616a;color:#2b303b;">do</span><span>!(|</span><span style="color:#bf616a;">i</span><span>| {
+</span><span>        </span><span style="color:#96b5b4;">withdraw_and_check_coin_values</span><span>(
+</span><span>            &amp;</span><span style="color:#b48ead;">mut</span><span> ts,
+</span><span>            lp_addrs[i],
+</span><span>            left_amounts[i],
+</span><span>            right_amounts[i]
+</span><span>        );
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts, clock);
+</span><span>}
+</span></code></pre>
+<p>Here we make use of the wonderful <code>do!(|i| {f(i)})</code> macro, which lets us do something for every entry of a vector. This macro increments a temporary indexing variable <code>i</code> from 0 to <code>lp_addrs.length()</code> (exclusive). We then use this indexing variable to provide and withdraw the right amounts of liquidity for each LP by accessing elements of vectors with <code>[i]</code>. (The <code>do!</code> macro is one of the Move vector macros with a similar functionality to <code>V.forEach(|i| {f(i)})</code> or <code>for v in V</code> you may be familiar with from other programming languages. To be exact, <code>N.do!(|i| {f(i)})</code> should be read as <code>for i in range(N)) {f(i)}</code>, or &quot;for i between 0 and N exclusive, execute f(i)&quot;). </p>
+<p>Make sure your new test works by calling <code>iota move test</code>, and checking that it passes. If it does, congratulations! (If it doesn't, I'm confident you can figure out why it doesn't, since you've already come this far.) Now let's talk earning fees.</p>
+<h2 id="testing-fees-single-liquidity-provider">Testing Fees: Single Liquidity Provider</h2>
+<p>Our previous tests confirm that supplying and withdrawing liquidity works fine if no trades happen in the pool in the mean time. Obviously, this isn't a realistic scenario, given that the whole point of providing liquidity is to earn fees from swaps. Let's dive into testing fee-earning next.</p>
+<p>Let's start by writing a test for the simplest possible scenario: there is one liquidity provider, a trader executing two &quot;equivalent&quot; swaps, all in just a single bin. Then we make sure the Liquidity Provider actually gets the expected amount of fees when they withdraws. We will start out by setting up a pool and providing liquidity to it:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">earn_fees_single_lp</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = </span><span style="color:#96b5b4;">scenario_default_pool</span><span>();
+</span><span>    </span><span style="color:#b48ead;">let</span><span> lp_addr = @</span><span style="color:#d08770;">0xA</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trader_addr = @</span><span style="color:#d08770;">0xB</span><span>;
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_supplied = </span><span style="color:#d08770;">300 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_supplied = </span><span style="color:#d08770;">300 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_count = </span><span style="color:#d08770;">3</span><span>; </span><span style="color:#65737e;">// Doesn&#39;t really matter here
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> clock = clock::create_for_testing(ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">provide_liquidity</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts,
+</span><span>        lp_addr,
+</span><span>        left_supplied,
+</span><span>        right_supplied,
+</span><span>        bin_count,
+</span><span>        &amp;clock
+</span><span>    );
+</span><span>}
+</span></code></pre>
+<p>The bin count doesn't really matter; all we need to do is make sure that the active bin has enough liquidity to execute the swap. This avoids a complex calculation for the fee.</p>
+<p>Now let's execute some swaps. We will trade two amounts that should be exactly equivalent under the <code>Pool</code>s price. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">earn_fees_single_lp</span><span>() {
+</span><span>    ...
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_left = </span><span style="color:#d08770;">1 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_right = ufp256::new(</span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>).</span><span style="color:#96b5b4;">mul_u64</span><span>(trade_left);
+</span><span>    </span><span style="color:#96b5b4;">swap_ltr_and_transfer</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_left, &amp;clock);
+</span><span>    </span><span style="color:#96b5b4;">swap_rtl_and_transfer</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_right, &amp;clock);
+</span><span>}
+</span></code></pre>
+<p>Now, to finish the test, we withdraw the liquidity and check that the liquidity provider does indeed get their tokens, plus the fees from the two swaps.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fun </span><span style="color:#96b5b4;">earn_fees_single_lp</span><span>() {
+</span><span>    ...
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_earned_fee_left = </span><span style="color:#96b5b4;">get_fee</span><span>(trade_left, </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_earned_fee_right = </span><span style="color:#96b5b4;">get_fee</span><span>(trade_right, </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>);
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">withdraw_and_check_coin_values</span><span>(
+</span><span>        &amp;</span><span style="color:#b48ead;">mut</span><span> ts, 
+</span><span>        lp_addr, 
+</span><span>        left_supplied + expected_earned_fee_left,
+</span><span>        right_supplied + expected_earned_fee_right
+</span><span>    );
+</span><span>    </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts, clock);
+</span><span>}
+</span></code></pre>
+<p>And that's it! Again, make sure to check that your test passes with the <code>iota move test</code> command.</p>
+<h2 id="testing-fees-multiple-liquidity-providers">Testing Fees: Multiple Liquidity Providers</h2>
+<p>Now, to make things a little more complex, let's add a test for earning fees when the <code>Pool</code> has multiple liquidity providers. It's largely similar to the previous test, we just need a little bit more code to handle the multiple liquidity providers. Let's start out by setting up the pool and supplying liquidity:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Test if fees are properly distributed when there are multiple liquidity
+</span><span style="color:#65737e;">/// providers for a pool.
+</span><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">earn_fees_multi_lp</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = </span><span style="color:#96b5b4;">scenario_default_pool</span><span>();
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trader_addr = @</span><span style="color:#d08770;">0xB</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> clock = clock::create_for_testing(ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> lp_addrs = vector[@</span><span style="color:#d08770;">0xA</span><span>, @</span><span style="color:#d08770;">0xB</span><span>, @</span><span style="color:#d08770;">0xC</span><span>, @</span><span style="color:#d08770;">0xD</span><span>, @</span><span style="color:#d08770;">0xE</span><span>];
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_supplied = </span><span style="color:#d08770;">100 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_supplied = </span><span style="color:#d08770;">100 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// First provide all liquidity
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_count = </span><span style="color:#d08770;">3</span><span>; </span><span style="color:#65737e;">// Doesn&#39;t really matter here
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> i = </span><span style="color:#d08770;">0</span><span>;
+</span><span>    lp_addrs.</span><span style="background-color:#bf616a;color:#2b303b;">do</span><span>!(|</span><span style="color:#bf616a;">lp_addr</span><span>|{
+</span><span>        </span><span style="color:#96b5b4;">provide_liquidity</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, lp_addr, left_supplied, right_supplied, bin_count, &amp;clock);
+</span><span>        i = i + </span><span style="color:#d08770;">1</span><span>;
+</span><span>    });
+</span><span>}
+</span></code></pre>
+<p>Again, we use a vector to hold multiple addresses and loop over them with the <code>lp_addrs.do!()</code> macro. To not complicate things, we make each LP provide the same amounts over the same amount of bins. To finish the test, we execute two swaps, just like in the previous test, and then we make sure that each LP gets the right amount of tokens upon withdrawing.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fun </span><span style="color:#96b5b4;">earn_fees_multi_lp</span><span>() {
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Perform swaps
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_left = </span><span style="color:#d08770;">1 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_right = ufp256::new(</span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>).</span><span style="color:#96b5b4;">mul_u64</span><span>(trade_left);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Expected earned fees per liquidity provider
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_earned_fee_left = </span><span style="color:#96b5b4;">get_fee</span><span>(trade_left, </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>) / </span><span style="color:#d08770;">5</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_earned_fee_right = </span><span style="color:#96b5b4;">get_fee</span><span>(trade_right, </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>) / </span><span style="color:#d08770;">5</span><span>;
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">swap_ltr_and_transfer</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_left, &amp;clock);
+</span><span>    </span><span style="color:#96b5b4;">swap_rtl_and_transfer</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_right, &amp;clock);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Check that the expected amount of fees are earned
+</span><span>    </span><span style="color:#65737e;">// Then withdraw one by one
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> i = </span><span style="color:#d08770;">0</span><span>;
+</span><span>    lp_addrs.</span><span style="background-color:#bf616a;color:#2b303b;">do</span><span>!(|</span><span style="color:#bf616a;">lp_addr</span><span>|{
+</span><span>        </span><span style="color:#96b5b4;">withdraw_and_check_coin_values</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, lp_addr, left_supplied + expected_earned_fee_left, right_supplied + expected_earned_fee_right);
+</span><span>        i = i + </span><span style="color:#d08770;">1</span><span>;
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts, clock);
+</span><span>}
+</span></code></pre>
+<h1 id="testing-for-the-trader-swaps">Testing for The Trader: Swaps</h1>
+<p>Let's begin writing some tests for swaps. Again, we will discuss a few different scenarios that we expect to see in the use of the <code>Pool</code>s. </p>
+<h2 id="simple-swaps-single-bin">Simple Swaps: Single Bin</h2>
+<p>The simplest scenario is the one where a single trader swaps inside a single bin. Let's start writing this test by setting up a pool, defining the trading amounts, and executing the swaps:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_single_bin</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(</span><span style="color:#b48ead;">mut</span><span> ts, clock) = </span><span style="color:#96b5b4;">scenario_default_pool_with_liquidity</span><span>(
+</span><span>        @</span><span style="color:#d08770;">0xABCDEF</span><span>,
+</span><span>        </span><span style="color:#d08770;">1</span><span>,
+</span><span>        </span><span style="color:#d08770;">10 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>),
+</span><span>        </span><span style="color:#d08770;">10 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>)
+</span><span>    );
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Perform swaps
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trader_addr = @</span><span style="color:#d08770;">0xABAB</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_left = </span><span style="color:#d08770;">1 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_right = </span><span style="color:#d08770;">1 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right = </span><span style="color:#96b5b4;">swap_ltr</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_left, &amp;clock);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left = </span><span style="color:#96b5b4;">swap_rtl</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_right, &amp;clock);
+</span><span>}
+</span></code></pre>
+<p>Note that we don't have to mint any tokens here, since the <code>swap_ltr</code> / <code>swap_rtl</code> helper functions do that already. To finish off this test, we should check the received <code>Coin</code> amounts. We calculate the expected amounts by first deducting the fee amount directly from the input <code>Coin</code>s, and then multiplying and dividing by the <code>Pool</code>s price to get the right and left values respectively. Then we assert that the received coin values are equal to the expected values.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fun </span><span style="color:#96b5b4;">swap_single_bin</span><span>() {
+</span><span>    ...
+</span><span>    </span><span style="color:#65737e;">// Check swap results
+</span><span>    </span><span style="color:#b48ead;">let</span><span> price = ufp256::new(</span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_left_after_fees = trade_left * (</span><span style="color:#d08770;">ONE_BPS </span><span>- </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>) / </span><span style="color:#d08770;">ONE_BPS</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_value_right = price.</span><span style="color:#96b5b4;">mul_u64</span><span>(trade_left_after_fees);
+</span><span>    </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_right.</span><span style="color:#96b5b4;">value</span><span>(), expected_value_right);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_right_after_fees = trade_right * (</span><span style="color:#d08770;">ONE_BPS </span><span>- </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>) / </span><span style="color:#d08770;">ONE_BPS</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_value_left = price.</span><span style="color:#96b5b4;">div_u64</span><span>(trade_right_after_fees);
+</span><span>    </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_left.</span><span style="color:#96b5b4;">value</span><span>(), expected_value_left);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Return coins to owner
+</span><span>    transfer::public_transfer(coin_right, trader_addr);
+</span><span>    transfer::public_transfer(coin_left, trader_addr);
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts, clock);
+</span><span>}
+</span></code></pre>
+<p>To complete the test, we need to do something with the <code>Coin</code>s, since they are non-drop. So we simply &quot;give back&quot; the coins to the trader's address. Make sure to run your test and check that it passes. For the next test, let's make things a bit more challenging.</p>
+<h2 id="simple-swaps-multiple-bins">Simple Swaps: Multiple Bins</h2>
+<p>The previous test was pretty straight forward, mostly because we didn't cross over any bins. In this subsection, we will write a test for the more complicated multi-bin scenario. The setup will be largely the same as for the previous test. We will just need to do some more complicated calculations for the expected amounts. The setup does now include specific amounts, so that we can guarantee that the swap will cross over one bin.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_multiple_bins</span><span>() {
+</span><span>    </span><span style="color:#65737e;">// Deposit 2bln LEFT and/or RIGHT per bin.
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_count = </span><span style="color:#d08770;">3</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_amount_per_bin = </span><span style="color:#d08770;">2 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_amount_per_bin = </span><span style="color:#d08770;">2 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_amount = left_amount_per_bin * ((bin_count + </span><span style="color:#d08770;">1</span><span>) / </span><span style="color:#d08770;">2</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_amount = right_amount_per_bin * ((bin_count + </span><span style="color:#d08770;">1</span><span>) / </span><span style="color:#d08770;">2</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(</span><span style="color:#b48ead;">mut</span><span> ts, clock) = </span><span style="color:#96b5b4;">scenario_default_pool_with_liquidity</span><span>(
+</span><span>        @</span><span style="color:#d08770;">0xABCDEF</span><span>,
+</span><span>        bin_count,
+</span><span>        left_amount,
+</span><span>        right_amount
+</span><span>    );
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Perform swaps
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trader_addr = @</span><span style="color:#d08770;">0xABAB</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_amount_left = </span><span style="color:#d08770;">6 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_amount_right = </span><span style="color:#d08770;">3 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>}
+</span></code></pre>
+<p>We will first swap <code>L</code> for <code>R</code>, crossing over one bin to the right. Then we will execute a second swap, <code>R</code> for <code>L</code> which crosses back over the starting bin. The calculations can be a bit hard to follow, so comments are added to hopefully make things a bit more clear.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fun </span><span style="color:#96b5b4;">swap_multiple_bins</span><span>() {
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Calculate expected swap results (left-to-right)
+</span><span>    </span><span style="color:#b48ead;">let</span><span> first_bin_price = ufp256::new(</span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>);
+</span><span>    </span><span style="color:#65737e;">// The below calculation has to be executed in this way, because it mimics 
+</span><span>    </span><span style="color:#65737e;">// the implementation in the smart contract. (To be precise, it could cause
+</span><span>    </span><span style="color:#65737e;">// issues if you did the multiplication before the division.)
+</span><span>    </span><span style="color:#b48ead;">let</span><span> second_bin_price = first_bin_price.</span><span style="color:#96b5b4;">mul</span><span>(ufp256::from_fraction((</span><span style="color:#d08770;">ONE_BPS</span><span>+</span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>) as u256, </span><span style="color:#d08770;">ONE_BPS </span><span>as u256));
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// We swap enough to cross over, so we will certainly receive all of the
+</span><span>    </span><span style="color:#65737e;">// `right` in the starting bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_from_first_bin = right_amount_per_bin;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_traded_in_first_bin_no_fees = first_bin_price.</span><span style="color:#96b5b4;">div_u64</span><span>(right_amount_per_bin);
+</span><span>    </span><span style="color:#65737e;">// Since the swap crosses a bin, fees are paid by addition instead of by 
+</span><span>    </span><span style="color:#65737e;">// deduction (that is, we pay more tokens, instead of getting less tokens in
+</span><span>    </span><span style="color:#65737e;">// return). This is a strictly technical distinction, but it&#39;s important
+</span><span>    </span><span style="color:#65737e;">// because it means we need to use `apply_fee_inv` to calculate the fees 
+</span><span>    </span><span style="color:#65737e;">// paid.
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_remaining = trade_amount_left - (</span><span style="color:#96b5b4;">apply_fee_inv</span><span>(left_traded_in_first_bin_no_fees, </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>));
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_from_second_bin = second_bin_price.</span><span style="color:#96b5b4;">mul_u64</span><span>(</span><span style="color:#96b5b4;">apply_fee</span><span>(left_remaining, </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>));
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Add up the amounts
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_value_right = right_from_first_bin + right_from_second_bin;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Swap and check left-to-right swap
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right = </span><span style="color:#96b5b4;">swap_ltr</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_amount_left, &amp;clock);
+</span><span>    </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_right.</span><span style="color:#96b5b4;">value</span><span>(), expected_value_right);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Calculate expected swap results (right-to-left)
+</span><span>    </span><span style="color:#65737e;">// Now we need to make sure to account for the `LEFT` tokens left in the 
+</span><span>    </span><span style="color:#65737e;">// bins by the left-to-right swap. The first two lines below mimic the lines
+</span><span>    </span><span style="color:#65737e;">// above to calculate `left_remaining`.
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_for_full_first_bin_no_fee = first_bin_price.</span><span style="color:#96b5b4;">div_u64</span><span>(right_amount_per_bin);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_from_second_bin = trade_amount_left - (</span><span style="color:#96b5b4;">apply_fee_inv</span><span>(left_for_full_first_bin_no_fee, </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>));
+</span><span>    </span><span style="color:#65737e;">// Now we calculate how much right we still have after the swap in the
+</span><span>    </span><span style="color:#65737e;">// right-most bin, and crossing over to the starting bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_remaining =  trade_amount_right - (</span><span style="color:#96b5b4;">apply_fee_inv</span><span>(second_bin_price.</span><span style="color:#96b5b4;">mul_u64</span><span>(left_from_second_bin), </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>));
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_from_first_bin = first_bin_price.</span><span style="color:#96b5b4;">div_u64</span><span>(</span><span style="color:#96b5b4;">apply_fee</span><span>(right_remaining, </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>));
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Add up the amounts
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_value_left = left_from_first_bin + left_from_second_bin;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Swap and check the right-to-left swap
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left = </span><span style="color:#96b5b4;">swap_rtl</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_amount_right, &amp;clock);
+</span><span>    </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_left.</span><span style="color:#96b5b4;">value</span><span>(), expected_value_left);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Return coins to owner
+</span><span>    transfer::public_transfer(coin_right, trader_addr);
+</span><span>    transfer::public_transfer(coin_left, trader_addr);
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts, clock);
+</span><span>}
+</span></code></pre>
+<p>That's it! Quite a bit of finnicky calculations, but at least we can now be sure - if your test does pass, and it should - that the core of the Liquidity Book model works. </p>
+<h2 id="lots-of-swaps-more-swaps">Lots of Swaps: More Swaps</h2>
+<p>Let's kick it up a notch and do a more vigorous test: we should write a test for executing a whole load of swaps. (This test passing doesn't really test anything that the other tests don't already test, but it is fun.) Let's do a hundred swaps. We will alternate left-to-right and right-to-left swaps to keep the amount in the starting bin balanced. The test is pretty concise: setup, do swaps, and wrap up.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_single_bin_lots_of_swaps</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(</span><span style="color:#b48ead;">mut</span><span> ts, clock) = </span><span style="color:#96b5b4;">scenario_default_pool_with_liquidity</span><span>(
+</span><span>        @</span><span style="color:#d08770;">0xABCDEF</span><span>,
+</span><span>        </span><span style="color:#d08770;">1</span><span>,
+</span><span>        </span><span style="color:#d08770;">5 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>),
+</span><span>        </span><span style="color:#d08770;">5 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>)
+</span><span>    );
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Set equivalent left and right amount so trades don&#39;t change active bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trader_addr = @</span><span style="color:#d08770;">0xABAB</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_left = </span><span style="color:#d08770;">1 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_right = ufp256::new(</span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>).</span><span style="color:#96b5b4;">mul_u64</span><span>(trade_left);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Perform 100 swaps
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> i = </span><span style="color:#d08770;">0</span><span>;
+</span><span>    </span><span style="color:#b48ead;">while </span><span>(i &lt; </span><span style="color:#d08770;">100</span><span>) {
+</span><span>        </span><span style="color:#96b5b4;">swap_ltr_and_transfer</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_left, &amp;clock);
+</span><span>        </span><span style="color:#96b5b4;">swap_rtl_and_transfer</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, trader_addr, trade_right, &amp;clock);
+</span><span>        i = i + </span><span style="color:#d08770;">1</span><span>;
+</span><span>    };
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts, clock);
+</span><span>}
+</span></code></pre>
+<p>Although we didn't have much reason to suspect problems, this test confirms that our <code>Pool</code> stays stable even if a large number of swaps occurs in one. You may be tempted to increase the number of swaps dramatically, as I was. Unfortunately, you will see that increasing the number of swaps even slightly results in your test giving a TIMEOUT. You then may be tempted to try and increase the timeout limit for tests, but as far as the documentation goes, no way to change it is specified. (This was presumably done to discourage Move developers from writing code which takes a lot of time (and thus gas) to execute.) </p>
+<p>That's it for all the swap tests! There is a lot of things we could still test with regards to swaps, but to not stretch this article out any longer, we leave it to the reader as an exercise. Let's move on to the final category of tests in this article, confirming that some things do <em>not</em> work.</p>
+<h1 id="testing-expected-failures">Testing Expected Failures</h1>
+<p>In addition to testing the successful execution of code, it's also important to test that errors are thrown whenever we expect them. To wrap up this article, we will look at some expected failures, and show that our code fails successfully.</p>
+<h2 id="expected-failure-nonsensical-liquidity-provisions">Expected Failure: Nonsensical Liquidity Provisions</h2>
+<p>Let's start with the <code>ENoLiquidityProvided</code> error whenever someone tries to call <code>provide_liquidity_uniformly</code> with coins of zero value. We wrote the following in our original implementation:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>entry fun provide_liquidity_uniformly&lt;L, R&gt;(
+</span><span>    </span><span style="color:#b48ead;">mut</span><span> coin_left: Coin&lt;L&gt;,
+</span><span>    </span><span style="color:#b48ead;">mut</span><span> coin_right: Coin&lt;R&gt;,
+</span><span>    ...
+</span><span>) {
+</span><span>    </span><span style="color:#65737e;">// Assert some minimal amount of liquidity is added
+</span><span>    assert!(coin_left.</span><span style="color:#96b5b4;">value</span><span>() &gt; </span><span style="color:#d08770;">0 </span><span>|| coin_right.</span><span style="color:#96b5b4;">value</span><span>() &gt; </span><span style="color:#d08770;">0</span><span>,
+</span><span>        ENoLiquidityProvided);
+</span><span>
+</span><span>    [...]
+</span><span>}
+</span></code></pre>
+<p>Let's create a test to show that the error is actually thrown. By using the <code>#[expected_failure]</code> annotation, we can let the Move compiler know that failure is actually expected, and the test should pass if (and only if) the code generates a runtime error.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>#[</span><span style="color:#bf616a;">expected_failure</span><span>(abort_code = liquidity_book::ENoLiquidityProvided)]
+</span><span>fun </span><span style="color:#96b5b4;">provide_liquidity_uniformly_abort_on_no_liquidity</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = </span><span style="color:#96b5b4;">scenario_default_pool</span><span>();
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_count = </span><span style="color:#d08770;">1</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> clock = clock::create_for_testing(ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>    </span><span style="color:#b48ead;">let</span><span> placeholder_addr = @</span><span style="color:#d08770;">0xABCDEF</span><span>;
+</span><span>    </span><span style="color:#96b5b4;">provide_liquidity</span><span>(&amp;</span><span style="color:#b48ead;">mut</span><span> ts, placeholder_addr, </span><span style="color:#d08770;">0</span><span>, </span><span style="color:#d08770;">0</span><span>, bin_count, &amp;clock);
+</span><span>
+</span><span>    </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts, clock);
+</span><span>}
+</span></code></pre>
+<p>You might wonder why we still need to call <code>end_scenario_with_clock</code>, given that this code will never be reached (if the test does indeed fail at runtime on <code>provide_liquidity</code> as expected). This is because the test still needs to be valid at compile-time, since the compiler doesn't know which part of the code you expect to fail. </p>
+<h2 id="expected-failure-receipt-fraud">Expected Failure: Receipt Fraud</h2>
+<p>Let's look at one other expected failure, <code>EInvalidPoolID</code>. This error is thrown when someone tries to use the receipt for the wrong pool. To test this error, we'll create two pools, and try to use a receipt we got from the second pool to withdraw from the first. Note that unfortunately we can't use the helper functions we wrote. This is because they all depend on only one <code>Pool</code> existing in the test scenario's object pool. Luckily, this means that most of the function should read to you as boilerplate:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>#[</span><span style="color:#bf616a;">expected_failure</span><span>(abort_code = liquidity_book::EInvalidPoolID)]
+</span><span>fun </span><span style="color:#96b5b4;">reject_invalid_receipt</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> lp_addr = @</span><span style="color:#d08770;">0xA</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_supplied = </span><span style="color:#d08770;">5 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_supplied = </span><span style="color:#d08770;">5 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#65737e;">// Create first pool
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(</span><span style="color:#b48ead;">mut</span><span> ts, clock) = </span><span style="color:#96b5b4;">scenario_default_pool_with_liquidity</span><span>(
+</span><span>        @</span><span style="color:#d08770;">0xABCDEF</span><span>,
+</span><span>        </span><span style="color:#d08770;">1</span><span>,
+</span><span>        left_supplied,
+</span><span>        right_supplied
+</span><span>    );
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Create second pool and have `lp_addr` provide the same liquidity as already
+</span><span>    </span><span style="color:#65737e;">// exists in the first pool
+</span><span>    liquidity_book::new&lt;LEFT, RIGHT&gt;(
+</span><span>        </span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>,
+</span><span>        </span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>,
+</span><span>        </span><span style="color:#d08770;">DEFAULT_FEE_BPS</span><span>,
+</span><span>        ts.</span><span style="color:#96b5b4;">ctx</span><span>()
+</span><span>    );
+</span><span>    </span><span style="color:#b48ead;">let</span><span> receipt = </span><span style="color:#96b5b4;">provide_liquidity_receipt</span><span>(
+</span><span>        &amp;</span><span style="color:#b48ead;">mut</span><span> ts,
+</span><span>        lp_addr, 
+</span><span>        left_supplied,
+</span><span>        right_supplied,
+</span><span>        </span><span style="color:#d08770;">1</span><span>,
+</span><span>        &amp;clock
+</span><span>    );
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Get receipt to try to withdraw liquidity from the other pool
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(lp_addr);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Call take_shared twice to get the first pool
+</span><span>    </span><span style="color:#b48ead;">let</span><span> second_pool = ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> first_pool = ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Try to withdraw from the wrong pool (namely from the first pool)
+</span><span>    </span><span style="color:#b48ead;">let </span><span>(left_coin, right_coin) = first_pool.</span><span style="color:#96b5b4;">withdraw_liquidity</span><span>(receipt, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>    transfer::public_transfer(left_coin, lp_addr);
+</span><span>    transfer::public_transfer(right_coin, lp_addr);
+</span><span>
+</span><span>    ts::return_shared(second_pool);
+</span><span>    ts::return_shared(first_pool);
+</span><span>    </span><span style="color:#96b5b4;">end_scenario_with_clock</span><span>(ts, clock);
+</span><span>}
+</span></code></pre>
+<p>Hopefully the code is self-explanatory, especially with the added comments. Note here that we changed the &quot;expected failure abort code&quot; to <code>liquidity_book::EInvalidPoolID</code> to make sure that the code results in this error. Note again how again, the line that we expect to throw the error (where we call <code>first_pool.withdraw_liquidity(...)</code>) isn't the last line. We still need to make sure the code makes sense even if it <em>didn't</em> throw an error. </p>
+<p>Ideally, your code would include a test for each possible error that your code throws. This is one of the challenges listed at the end of this article. </p>
+<p>And with that, we have come to the conclusion of this article on testing.</p>
+<h1 id="wrap-up">Wrap up</h1>
+<p>Now, we have come to the end of this article, and with it, the end of this article series showing you exactly how to build a Liquidity Book DEX with Move. If you've come all this way, thank you very much for reading. I hope you learned something new, and are excited to keep building smart contracts with Move. Below, I've included a few more challenges for you to complete, if you're up for the challenge. </p>
+<p>Thanks again to <em>iotalabs</em> for supporting this article series with a grant, and thanks to you, the reader, for reading.</p>
+<h1 id="challenges">Challenges</h1>
+<p>There are many different tests that one could write. Here are two suggestions:</p>
+<ul>
+<li>Create a test which combines swaps over multiple bins and multiple liquidity providers.</li>
+<li>Create <code>#[expected_failure]</code> tests for the two other errors that we included in our <code>liquidity_book.move</code> code: <code>EInsufficientPoolLiquidity</code>, and <code>EEvenBincount</code>.</li>
+</ul>
+
+        </section>
+
+        
+
+    </article>
+</main>
+
+
+
+        <footer>
+  <div style="display:flex">
+    
+        <a class="soc" href=https:&#x2F;&#x2F;github.com&#x2F;teunvw14 title=GitHub>
+            <i data-feather=github></i>
+        </a>
+    
+        <a class="soc" href=https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;teun-van-wezel&#x2F; title=LinkedIn>
+            <i data-feather=linkedin></i>
+        </a>
+    
+  </div>
+  <div class="footer-info">
+    2026 © Teun van Wezel | Built with <a href="https://www.getzola.org/">Zola</a> / <a
+      href="https://github.com/XXXMrG/archie-zola">Archie-Zola Theme</a>
+  </div>
+</footer>
+
+
+<script>
+    feather.replace();
+</script>
+
+
+    </div>
+</body>
+
+</html>

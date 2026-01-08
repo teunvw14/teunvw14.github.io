@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+
+    
+        <title>
+             IOTA Rebased - Writing a Raffle Smart Contract With Move
+            
+        </title>
+
+        
+            <meta property="og:title" content="IOTA Rebased - Writing a Raffle Smart Contract With Move" />
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+         <link rel="icon" type="image/png" href=&#x2F;icon&#x2F;favicon.png />
+    
+
+    
+
+    
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4SM5P4FCHX"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-4SM5P4FCHX');
+        </script>
+    
+
+    
+    
+        <script src=https://teunvw14.github.io/js/feather.min.js></script>
+    
+
+
+    
+        <link href=https://teunvw14.github.io/css/fonts.css rel="stylesheet" />
+    
+
+    <link rel="stylesheet" type="text/css" media="screen" href=https://teunvw14.github.io/css/main.css />
+
+    
+        <link
+            rel="stylesheet"
+            id="darkModeStyle"
+            type="text/css"
+            href=https://teunvw14.github.io/css/dark.css
+            
+            
+                disabled
+            
+        />
+    
+
+    
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+    
+
+
+    
+
+
+</head>
+
+
+<body>
+    <div class="content">
+        <header>
+    
+    <div class="main" id="main_title">
+        <img src="../../favicon_hires.png" style="max-height: 24px; margin-right: 8px;"/>
+        <a href=https:&#x2F;&#x2F;teunvw14.github.io>Teun van Wezel&#x27;s Tech Blog</a>
+    </div>
+    
+    <nav>
+        
+            <a href=&#x2F;>Blog</a>
+        
+            <a href=&#x2F;posts>All posts</a>
+        
+
+        
+            |
+
+            
+                <a href=&#x2F;>en</a>
+            
+        
+
+        
+            | <a id="dark-mode-toggle" onclick="toggleTheme()" href=""></a>
+            <script src=https://teunvw14.github.io/js/themetoggle.js></script>
+        
+    </nav>
+</header>
+
+
+        
+    
+<main>
+    <article>
+        <div class="title">
+            <h1 class="title">IOTA Rebased - Writing a Raffle Smart Contract With Move</h1>
+            <div class="meta">
+                
+                on  2024-12-23
+
+                
+            </div>
+        </div>
+
+        
+
+        <section class="body">
+            <p><img src="https://teunvw14.github.io/posts/iota-move-raffle-tutorial/iota-raffle-ticket.jpg" alt="IOTA Raffle Ticket" /></p>
+<p>In this article, we'll see how you can create a raffle smart contract with Move on <a rel="noopener" target="_blank" href="https://blog.iota.org/iota-rebased-fast-forward">IOTA Rebased</a>. This smart contract will let users create raffles, and sell tickets for them. The goal of this article is to teach you about Move smart contracts by guiding you through writing one yourself. There are exercises at the end of this article to challenge you to expand the smart contract in your own way.</p>
+<p>The source code for this project can be found <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-raffle">here on GitHub</a>.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>Though this is a tutorial for Move beginners, if you have never written or deployed a Move smart contract on IOTA Rebased, it's recommended to read and work through <a href="../iota-rebased-sc/">this article</a> first. The reader is expected to have some programming knowledge. </p>
+<p>To write, test, and deploy our smart contract, we will need:</p>
+<ul>
+<li><a rel="noopener" target="_blank" href="https://github.com/iotaledger/iota">IOTA CLI</a> - compiling from source takes quite a while, so consider installing one of <a rel="noopener" target="_blank" href="https://docs.iota.org/developer/getting-started/install-iota#install-from-binaries">the pre-built binaries</a></li>
+<li>Strongly recommended: Using Visual Studio Code with the <a rel="noopener" target="_blank" href="https://marketplace.visualstudio.com/items?itemName=iotaledger.iota-move">IOTA Move extension</a></li>
+</ul>
+<h2 id="raffle-smart-contract-requirements">Raffle Smart Contract Requirements</h2>
+<p>Before we get started, we should specify what exactly we want our raffle smart contract to do. To start off:</p>
+<ul>
+<li>It should let users create new raffles. Users should be able to set a ticket price (in a token of their choice), and a resolution time after which the winner of the raffle can claim the prize money;</li>
+<li>It should let users buy tickets to any existing raffles;</li>
+<li>It should allow users to &quot;resolve&quot; the raffle after the resolution time, and claim the prize money if they won. </li>
+</ul>
+<p>You might be able to come up with some more useful functionality - we'll keep it simple here though as to not make this article too long.</p>
+<h1 id="writing-the-raffle-smart-contract">Writing the Raffle Smart Contract</h1>
+<p>Let's get to writing the raffle smart contract. Create a new IOTA Move project, and open up the newly created folder in your code editor. </p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota move new raffle
+</span><span style="color:#bf616a;">$</span><span> cd raffle
+</span><span style="color:#bf616a;">$</span><span> code .
+</span></code></pre>
+<h2 id="starting-out-creating-the-raffle-and-raffleticket-structs">Starting Out: Creating the <code>Raffle</code> and <code>RaffleTicket</code> structs</h2>
+<p>Let's start out by defining a <code>Raffle</code> struct and a <code>RaffleTicket</code> struct in <code>sources/raffle.move</code>. Make sure to add the <code>use</code> imports at the top, we will need those later. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// sources/raffle.move
+</span><span>module raffle::raffle {
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// We will need these later on
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::balance::{</span><span style="color:#b48ead;">Self</span><span>, Balance};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::coin::{Coin};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::clock::{Clock};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::random::{</span><span style="color:#b48ead;">Self</span><span>, Random};
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// A raffle. Token `T` will be what is used to buy tickets for that raffle.
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>Raffle&lt;phantom T&gt; has key, store {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">ticket_price</span><span>: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>        </span><span style="color:#bf616a;">redemption_timestamp_ms</span><span>: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>        </span><span style="color:#bf616a;">prize_money</span><span>: Balance&lt;T&gt;,
+</span><span>        </span><span style="color:#bf616a;">sold_tickets</span><span>: vector&lt;ID&gt;,
+</span><span>        </span><span style="color:#bf616a;">winning_ticket</span><span>: Option&lt;ID&gt; </span><span style="color:#65737e;">// set when the raffle is resolved
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// A struct representing a ticket in a specific raffle.
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>RaffleTicket has key, store {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>A few things might not be immediately clear here. Hopefully the following notes will help:</p>
+<ul>
+<li>The <code>redemption_timestamp_ms</code> is the timestamp after which the raffle can be resolved (ended). We will set this on creating the <code>Raffle</code> based on the wanted raffle duration. When the raffle is resolved, a winning ticket is picked automatically and ticket sales are halted. </li>
+<li>To keep track of all the tickets that are sold, each raffle holds a vector holding the sold ticket <code>ID</code>'s. This allows the smart contract to pick a winning ticket when the raffle is resolved.</li>
+<li>To allow users to choose the token used to pay for raffle tickets, we have to make the <code>Raffle</code> type generic over the token type <code>T</code>, which is why the raffle type is defined as <code>Raffle&lt;phantom T&gt;</code>.</li>
+<li>The <code>RaffleTicket</code> doesn't really &quot;do&quot; anything. The power of defining this struct lies in Move's type system: our smart contract will be the only one able to create these <code>RaffleTicket</code>s, so that we can be sure no one else can create them (without paying the ticket price).</li>
+</ul>
+<h2 id="raffle-creation">Raffle Creation</h2>
+<p>Next, let's add a function for creating raffles. All we need to create an instance of our <code>Raffle</code> struct is calculating the redemption timestamp. The function will need to take a reference to the shared <code>Clock</code> to get the current time. (We'll see how to pass a reference to <code>Clock</code> as an argument at the end.)</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// sources/raffle.move
+</span><span>module raffle::raffle {    
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Create a raffle
+</span><span>    entry fun create_raffle&lt;T&gt;(ticket_price: </span><span style="color:#b48ead;">u64</span><span>, duration_s: </span><span style="color:#b48ead;">u64</span><span>, clock: &amp;Clock, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#65737e;">// Calculate the redemption timestamp from `duration_s`
+</span><span>        </span><span style="color:#b48ead;">let</span><span> redemption_timestamp_ms = clock.</span><span style="color:#96b5b4;">timestamp_ms</span><span>() + </span><span style="color:#d08770;">1000 </span><span>* duration_s;
+</span><span>        </span><span style="color:#65737e;">// Create the new raffle
+</span><span>        </span><span style="color:#b48ead;">let</span><span> raffle = Raffle&lt;T&gt; {
+</span><span>            id: object::new(ctx),
+</span><span>            ticket_price,
+</span><span>            redemption_timestamp_ms,
+</span><span>            prize_money: balance::zero&lt;T&gt;(),
+</span><span>            sold_tickets: vector[],
+</span><span>            winning_ticket: option::none()
+</span><span>        };
+</span><span>        </span><span style="color:#65737e;">// Make the raffle public by sharing it, so that people can buy tickets
+</span><span>        transfer::share_object(raffle);
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>We &quot;publicize&quot; the raffle by calling <code>transfer::share_object</code>. This call gives all network participants mutable access to <code>raffle</code>. This may seem worrying at first: doesn't that mean that anyone can take out all of the <code>prize_money</code> from a <code>Raffle</code>? No, because the MoveVM only lets structs be directly mutated in their defining modules. Which means that people can only mutate <code>Raffle</code>s in ways that we let them, as defined through functions exposed in our <code>raffle</code> module. </p>
+<p>To be technical, <a rel="noopener" target="_blank" href="https://docs.iota.org/references/framework/iota-framework/transfer#function-share_object">the <code>transfer::share_object</code> function</a> only allows network participants to get a mutable reference to the <code>Raffle</code> - which allows mutation <em>within</em> the defining module, but not anywhere else. In contrast, there also exists a <a rel="noopener" target="_blank" href="https://docs.iota.org/references/framework/iota-framework/transfer#function-freeze_object"><code>transfer::freeze_object</code> function</a> which only allows for getting immutable references. Objects that are &quot;frozen&quot; this way can't be mutated, not even by their defining modules. </p>
+<h2 id="ticket-sales">Ticket Sales</h2>
+<p>Let's continue by adding a function for buying tickets. The process starts by removing <code>ticket_price</code> tokens from the <code>payment</code> coin. We add this amount to the <code>prize_money</code>. Then we create the ticket. First, generate a new <code>UID</code> for the ticket - and add it to the list of <code>sold_ticket</code>s. With our new <code>ticket_id</code>, we create an instance of our <code>RaffleTicket</code> struct and transfer it to whomever called the <code>buy_ticket</code> function.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// sources/raffle.move
+</span><span>module raffle::raffle {    
+</span><span>    ...
+</span><span>    
+</span><span>    </span><span style="color:#65737e;">/// Buy a ticket to a raffle
+</span><span>    public fun buy_ticket&lt;T&gt;(raffle: &amp;</span><span style="color:#b48ead;">mut </span><span>Raffle&lt;T&gt;, payment: &amp;</span><span style="color:#b48ead;">mut  </span><span>Coin&lt;T&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#65737e;">// Add payment to the prize money
+</span><span>        raffle.prize_money.</span><span style="color:#96b5b4;">join</span><span>(payment.</span><span style="color:#96b5b4;">split</span><span>(raffle.ticket_price, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>());
+</span><span>        
+</span><span>        </span><span style="color:#65737e;">// Create and transfer ticket
+</span><span>        </span><span style="color:#b48ead;">let</span><span> ticket_id = object::new(ctx);
+</span><span>        raffle.sold_tickets.</span><span style="color:#96b5b4;">push_back</span><span>(ticket_id.</span><span style="color:#96b5b4;">to_inner</span><span>());
+</span><span>        </span><span style="color:#b48ead;">let</span><span> ticket = RaffleTicket { id: ticket_id };
+</span><span>        transfer::transfer(ticket, ctx.</span><span style="color:#96b5b4;">sender</span><span>());
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Since <code>UID</code>s have to be unique by definition, Move's type system won't let us create a copy of <code>ticket_id</code> directly. Instead we have to call <code>to_inner()</code> to get an <code>ID</code> (which basically functions as an object pointer, which MoveVM is fine with us copying). </p>
+<p>Maybe you've already noticed that there's a problem with our function. In fact there's two. The first is that we don't check if there's enough tokens in <code>payment</code> to fulfill the <code>ticket_price</code>. The second is that our <code>buy_ticket</code> function lets people buy tickets to raffles that have already been resolved (i.e. raffles for which a winner has already been picked). </p>
+<p>The first problem we don't have to worry about: Luckily for us, calling <code>coin.split(amount)</code> aborts automatically if the <code>coin</code> doesn't contain at least <code>amount</code> tokens.</p>
+<p>The second problem can be solved by checking if a winning ticket has been picked, before we complete a ticket sale. Let's create a helper function <code>is_resolved</code>, and update our ticket buying function to abort if the raffle has already been resolved:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// sources/raffle.move
+</span><span>module raffle::raffle {
+</span><span>    </span><span style="color:#b48ead;">const</span><span> ERaffleAlreadyResolved: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">0</span><span>;
+</span><span>
+</span><span>    ...
+</span><span>    </span><span style="color:#65737e;">// Check if a raffle has resolved yet
+</span><span>    public fun is_resolved&lt;T&gt;(raffle: &amp;Raffle&lt;T&gt;): </span><span style="color:#b48ead;">bool </span><span>{
+</span><span>        raffle.winning_ticket.</span><span style="color:#96b5b4;">is_some</span><span>()
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Buy a ticket to a raffle
+</span><span>    public fun buy_ticket&lt;T&gt;(raffle: &amp;</span><span style="color:#b48ead;">mut </span><span>Raffle&lt;T&gt;, payment: &amp;</span><span style="color:#b48ead;">mut  </span><span>Coin&lt;T&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#65737e;">// Cancel ticket sale if the raffle has been resolved already
+</span><span>        assert!(!raffle.</span><span style="color:#96b5b4;">is_resolved</span><span>(), ERaffleAlreadyResolved);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Add payment to the prize money
+</span><span>        raffle.prize_money.</span><span style="color:#96b5b4;">join</span><span>(payment.</span><span style="color:#96b5b4;">split</span><span>(raffle.ticket_price, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>());
+</span><span>        
+</span><span>        </span><span style="color:#65737e;">// Create and transfer ticket
+</span><span>        </span><span style="color:#b48ead;">let</span><span> ticket_id = object::new(ctx);
+</span><span>        raffle.sold_tickets.</span><span style="color:#96b5b4;">push_back</span><span>(ticket_id.</span><span style="color:#96b5b4;">to_inner</span><span>());
+</span><span>        </span><span style="color:#b48ead;">let</span><span> ticket = RaffleTicket { id: ticket_id };
+</span><span>        transfer::transfer(ticket, ctx.</span><span style="color:#96b5b4;">sender</span><span>());
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Make sure to add the error code at the top of your module <code>const ERaffleAlreadyResolved: u64 = 0;</code>. We will add a few more of these error codes. It's a good habit to add meaningful error codes to your Move smart contracts. They help users know what exactly went wrong when a transaction fails.</p>
+<h2 id="resolving-raffles-picking-a-winner">Resolving Raffles: Picking a Winner</h2>
+<p>Once the raffle has ended, we want to have our smart contract pick a winner at random. Let's create a function <code>resolve</code> for this. We will use <a rel="noopener" target="_blank" href="https://docs.iota.org/references/framework/iota-framework/random">the <code>random</code> module</a> to get a random ticket. We set <code>raffle.winning_ticket</code>, so that the winner can claim their prize money later on. </p>
+<p>Before we pick a winner, the function needs to check that the raffle hasn't been resolved already, and that the required time has passed.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// sources/raffle.move
+</span><span>module raffle::raffle {
+</span><span>    </span><span style="color:#b48ead;">const</span><span> ERaffleAlreadyResolved: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">0</span><span>;
+</span><span>    </span><span style="color:#b48ead;">const</span><span> ERaffleNotResolvableYet: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">1</span><span>; </span><span style="color:#65737e;">// new
+</span><span>    </span><span style="color:#b48ead;">const</span><span> ERaffleNotResolved: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">2</span><span>;      </span><span style="color:#65737e;">// new too
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Resolve the raffle (decide who wins)
+</span><span>    entry fun resolve&lt;T&gt;(raffle: &amp;</span><span style="color:#b48ead;">mut </span><span>Raffle&lt;T&gt;, clock: &amp;Clock, r: &amp;Random, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#65737e;">// Can&#39;t resolve twice
+</span><span>        assert!(!raffle.</span><span style="color:#96b5b4;">is_resolved</span><span>(), ERaffleAlreadyResolved);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Make sure that the raffle is ready to be resolved
+</span><span>        </span><span style="color:#b48ead;">let</span><span> current_timestamp_ms = clock.</span><span style="color:#96b5b4;">timestamp_ms</span><span>();
+</span><span>        assert!(current_timestamp_ms &gt;= raffle.redemption_timestamp_ms, ERaffleNotResolvableYet);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Pick a winner at random
+</span><span>        </span><span style="color:#b48ead;">let</span><span> tickets_sold = raffle.sold_tickets.</span><span style="color:#96b5b4;">length</span><span>();
+</span><span>        </span><span style="color:#b48ead;">let</span><span> winner_idx = random::new_generator(r, ctx).</span><span style="color:#96b5b4;">generate_u64_in_range</span><span>(</span><span style="color:#d08770;">0</span><span>, tickets_sold - </span><span style="color:#d08770;">1</span><span>);
+</span><span>        raffle.winning_ticket = option::some(raffle.sold_tickets[winner_idx]);
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Similarly to <code>Clock</code>, we will need a reference to the shared <code>Random</code> object to generate a random number. Lastly, again make sure to add the error codes <code>ERaffleAlreadyResolved</code> and <code>ERaffleNotResolvableYet</code> at the top of your module. </p>
+<h2 id="paying-out-prize-money">Paying Out Prize Money</h2>
+<p>We're almost done now. Note that the <code>resolve</code> function doesn't pay out the prize money - we will keep that functionality separate. For this purpose, we will create a dedicated function to claim the prize money. We'll need to make sure the raffle is resolved (i.e. a winner has been picked) and that the function caller has the winning ticket.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module raffle::raffle {
+</span><span>    </span><span style="color:#b48ead;">const</span><span> ERaffleAlreadyResolved: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">0</span><span>;
+</span><span>    </span><span style="color:#b48ead;">const</span><span> ERaffleNotResolvableYet: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">1</span><span>;
+</span><span>    </span><span style="color:#b48ead;">const</span><span> ERaffleNotResolved: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">2</span><span>;
+</span><span>    </span><span style="color:#b48ead;">const</span><span> ETicketDidNotWin: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">3</span><span>; </span><span style="color:#65737e;">// new
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Claim the prize money using the winning RaffleTicket
+</span><span>    public fun claim_prize_money&lt;T&gt;(raffle: &amp;</span><span style="color:#b48ead;">mut </span><span>Raffle&lt;T&gt;, ticket: RaffleTicket, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        assert!(raffle.</span><span style="color:#96b5b4;">is_resolved</span><span>(), ERaffleNotResolved);
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> RaffleTicket { id: winning_ticket_id } = ticket;
+</span><span>        assert!(raffle.winning_ticket == option::some(*winning_ticket_id.</span><span style="color:#96b5b4;">as_inner</span><span>()),
+</span><span>            ETicketDidNotWin
+</span><span>        );
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Delete winning ticket
+</span><span>        object::delete(winning_ticket_id);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Send full prize_money balance to winner
+</span><span>        </span><span style="color:#b48ead;">let</span><span> payout_coin = raffle.prize_money.</span><span style="color:#96b5b4;">withdraw_all</span><span>().</span><span style="color:#96b5b4;">into_coin</span><span>(ctx);
+</span><span>        transfer::public_transfer(payout_coin, ctx.</span><span style="color:#96b5b4;">sender</span><span>());
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>We delete the ticket to guarantee that this function can be called successfully only once. (Though there currently is no way to add to a <code>Raffle</code>'s prize money balance after it's been resolved, it's still a good safety measure.)</p>
+<h2 id="done">Done!</h2>
+<p>And that's it! Your smart contract should now be complete. If you want to check your code, the full source code can be found <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-raffle/blob/main/sources/raffle.move">here</a>.</p>
+<h1 id="deploying-our-smart-contract">Deploying Our Smart Contract</h1>
+<p>Now that we've built our smart contract, we want to make sure it works as intended. Make sure your IOTA Client CLI is configured to the IOTA Rebased testnet (<a rel="noopener" target="_blank" href="https://docs.iota.org/references/cli/client#set-current-environment">see here</a>) and publish (deploy) the smart contract to by calling (inside the <code>raffle</code> directory): </p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota client publish
+</span></code></pre>
+<p>Under 'Object Changes'-'Published Objects', you should see your package with <code>Modules: raffle</code>. Copy the <code>PackageID</code> and export it as an environment variable. In bash:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#b48ead;">export </span><span style="color:#bf616a;">PACKAGE_ID</span><span>=</span><span style="color:#a3be8c;">your_package_id_here
+</span></code></pre>
+<h1 id="using-our-smart-contract">Using Our Smart Contract</h1>
+<p>Now let's see the smart contract in action! We will use the <code>IOTA Client PTB CLI</code> to call the functions in our smart contract. We will create a raffle with tickets paid for in IOTA. To keep things tidy, start out by defining all the relevant environment variables in your shell:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#b48ead;">export </span><span style="color:#bf616a;">TICKET_PRICE_NANO</span><span>=</span><span style="color:#a3be8c;">100000000 </span><span style="color:#bf616a;">COIN_ID</span><span>=</span><span style="color:#a3be8c;">0x1234 </span><span style="color:#bf616a;">RAFFLE_DURATION_S</span><span>=</span><span style="color:#a3be8c;">120
+</span></code></pre>
+<p>You can change these values to your liking of course. Make sure to replace the value for <code>COIN_ID</code> with a valid address - you can get the ID of all of your coins by calling <code>iota client gas</code>. Just use whichever one has enough IOTA to cover the <code>TICKET_PRICE</code> (note that 1 IOTA = 1.000.000.000 nanos).</p>
+<p>Now let's create a raffle using these variables. Creating a raffle is done as follows, with <code>'&lt;0x2::iota::IOTA&gt;'</code> as a type argument for the token type <code>T</code>: </p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota client ptb</span><span style="color:#bf616a;"> --move-call </span><span>$</span><span style="color:#bf616a;">PACKAGE_ID</span><span>::raffle::create_raffle \
+</span><span>    &#39;</span><span style="color:#a3be8c;">&lt;0x2::iota::IOTA&gt;</span><span>&#39; $</span><span style="color:#bf616a;">TICKET_PRICE_NANO </span><span>$</span><span style="color:#bf616a;">RAFFLE_DURATION_S</span><span> @0x6
+</span></code></pre>
+<p>Here, <code>0x6</code> is the address of the shared <code>Clock</code> object. Because it's an address, the IOTA Client PTB CLI requires us to prefix this hex value with an <code>@</code>. </p>
+<p>The above command should give you output showing that the <code>Raffle</code> has been created. Make sure to export the <code>Raffle</code>'s ObjectID (see image below) as an environment variable <code>RAFFLE_ID</code>. We will need it in the next few commands.</p>
+<p><img src="https://teunvw14.github.io/posts/iota-move-raffle-tutorial/raffle-id.png" alt="The Raffle ObjectID in the command output" /></p>
+<p>Now, to buy a ticket for your raffle, call the <code>buy_ticket</code> as follows:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota client ptb</span><span style="color:#bf616a;"> --move-call </span><span>$</span><span style="color:#bf616a;">PACKAGE_ID</span><span>::raffle::buy_ticket \
+</span><span>    &#39;</span><span style="color:#a3be8c;">&lt;0x2::iota::IOTA&gt;</span><span>&#39; @$</span><span style="color:#bf616a;">RAFFLE_ID</span><span> @$</span><span style="color:#bf616a;">COIN_ID
+</span></code></pre>
+<p>You can buy multiple tickets by running this command repeatedly. </p>
+<p>The output of this command should show you that a <code>RaffleTicket</code> was created. Export an environment variable <code>TICKET_ID</code> with the <code>RaffleTicket</code>'s ObjectID (see image below).</p>
+<p><img src="https://teunvw14.github.io/posts/iota-move-raffle-tutorial/raffle-ticket-id.png" alt="The RaffleTicket ObjectID in the command output" /></p>
+<p>Then, to determine who's won the raffle (it's probably you!), resolve the raffle by calling the <code>resolve</code> function. If you do this fast enough (or if you set a really high raffle duration), you will get an error with code <code>0</code> (<code>ERaffleNotResolvableYet</code>). This is good; it means that the raffle is working as intended! Wait a little longer and try again. (Or create a new raffle that has a shorter duration.) Here again we have to pass in the <code>Clock</code> shared object at address <code>0x6</code>, but also the <code>Random</code> shared object, which is at address <code>0x8</code>.</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota client ptb</span><span style="color:#bf616a;"> --move-call </span><span>$</span><span style="color:#bf616a;">PACKAGE_ID</span><span>::raffle::resolve \
+</span><span>    &#39;</span><span style="color:#a3be8c;">&lt;0x2::iota::IOTA&gt;</span><span>&#39; @$</span><span style="color:#bf616a;">RAFFLE_ID</span><span> @0x6 @0x8
+</span></code></pre>
+<p>Now that the raffle is resolved, the winner (you) can claim their prize money with <code>claim_prize_money</code>. (If you bought multiple tickets for your raffle, make sure to check out your <code>Raffle</code> object on the <a rel="noopener" target="_blank" href="https://explorer.rebased.iota.org/">IOTA Rebased explorer</a> by searching for its ObjectID. You will be able to see the ObjectID of the winning ticket under the <code>winning_ticket</code> field of your <code>Raffle</code>. Export this value to the <code>TICKET_ID</code> environment variable.)</p>
+<p>Here goes:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota client ptb</span><span style="color:#bf616a;"> --move-call </span><span>$</span><span style="color:#bf616a;">PACKAGE_ID</span><span>::raffle::claim_prize_money \
+</span><span>    &#39;</span><span style="color:#a3be8c;">&lt;0x2::iota::IOTA&gt;</span><span>&#39; @$</span><span style="color:#bf616a;">RAFFLE_ID</span><span> @$</span><span style="color:#bf616a;">TICKET_ID
+</span></code></pre>
+<p>And from the output of this command, you should see that you got the tokens you paid for the tickets back (minus some gas), as shown below.</p>
+<p><img src="https://teunvw14.github.io/posts/iota-move-raffle-tutorial/claim-prize-money.png" alt="Claim prize money command output" /></p>
+<p>Congratulations! You've now successfully created and used your own raffle smart contract. </p>
+<h1 id="exercises">Exercises</h1>
+<p>If you've completed the above tutorial, and want to challenge yourself, try to add the following functionality to the raffle smart contract. You can do just one, or all of them if you'd like.</p>
+<ul>
+<li>A raffle creator supposes that by increasing the payout on a raffle, more people will be interested in buying a ticket. To support this idea, try adding a function to deposit funds into the prize pool that doesn't give the user a ticket in return.</li>
+<li>The raffle creator's raffles have been generating a lot of interest in the IOTA community. He thinks it's time to capitalize on that interest by starting to charge an &quot;administrative fee&quot; on his raffle ticket sales. Try adding fees to the ticket sale function. You will have to keep track of the creator of each raffle to pay out these &quot;administrative fees&quot; (for example by adding a <code>creator</code> field to the <code>Raffle</code> struct). </li>
+<li>The raffle creator raked in a large chunk of money with the &quot;administrative fees&quot; on his raffles. He wants to give back to the IOTA community by giving away a part of his earnings to one lucky winner. Try changing the smart contract to allow for this giveaway. Consider that a giveaway is basically a raffle where you can get a ticket for free - but you can't get more than one ticket. One approach would be to add a <code>maxTickets</code> to the <code>Raffle</code> struct.</li>
+</ul>
+<p>Thanks for reading!</p>
+
+        </section>
+
+        
+
+    </article>
+</main>
+
+
+
+        <footer>
+  <div style="display:flex">
+    
+        <a class="soc" href=https:&#x2F;&#x2F;github.com&#x2F;teunvw14 title=GitHub>
+            <i data-feather=github></i>
+        </a>
+    
+        <a class="soc" href=https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;teun-van-wezel&#x2F; title=LinkedIn>
+            <i data-feather=linkedin></i>
+        </a>
+    
+  </div>
+  <div class="footer-info">
+    2026 © Teun van Wezel | Built with <a href="https://www.getzola.org/">Zola</a> / <a
+      href="https://github.com/XXXMrG/archie-zola">Archie-Zola Theme</a>
+  </div>
+</footer>
+
+
+<script>
+    feather.replace();
+</script>
+
+
+    </div>
+</body>
+
+</html>

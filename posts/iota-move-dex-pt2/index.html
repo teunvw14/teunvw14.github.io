@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+
+    
+        <title>
+             Move on IOTA Rebased: Building a Decentralized Exchange Smart Contract. Part 2: Liquidity Providers and Fees
+            
+        </title>
+
+        
+            <meta property="og:title" content="Move on IOTA Rebased: Building a Decentralized Exchange Smart Contract. Part 2: Liquidity Providers and Fees" />
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+         <link rel="icon" type="image/png" href=&#x2F;icon&#x2F;favicon.png />
+    
+
+    
+
+    
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4SM5P4FCHX"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-4SM5P4FCHX');
+        </script>
+    
+
+    
+    
+        <script src=https://teunvw14.github.io/js/feather.min.js></script>
+    
+
+
+    
+        <link href=https://teunvw14.github.io/css/fonts.css rel="stylesheet" />
+    
+
+    <link rel="stylesheet" type="text/css" media="screen" href=https://teunvw14.github.io/css/main.css />
+
+    
+        <link
+            rel="stylesheet"
+            id="darkModeStyle"
+            type="text/css"
+            href=https://teunvw14.github.io/css/dark.css
+            
+            
+                disabled
+            
+        />
+    
+
+    
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+    
+
+
+    
+
+
+</head>
+
+
+<body>
+    <div class="content">
+        <header>
+    
+    <div class="main" id="main_title">
+        <img src="../../favicon_hires.png" style="max-height: 24px; margin-right: 8px;"/>
+        <a href=https:&#x2F;&#x2F;teunvw14.github.io>Teun van Wezel&#x27;s Tech Blog</a>
+    </div>
+    
+    <nav>
+        
+            <a href=&#x2F;>Blog</a>
+        
+            <a href=&#x2F;posts>All posts</a>
+        
+
+        
+            |
+
+            
+                <a href=&#x2F;>en</a>
+            
+        
+
+        
+            | <a id="dark-mode-toggle" onclick="toggleTheme()" href=""></a>
+            <script src=https://teunvw14.github.io/js/themetoggle.js></script>
+        
+    </nav>
+</header>
+
+
+        
+    
+<main>
+    <article>
+        <div class="title">
+            <h1 class="title">Move on IOTA Rebased: Building a Decentralized Exchange Smart Contract. Part 2: Liquidity Providers and Fees</h1>
+            <div class="meta">
+                
+                on  2025-04-25
+
+                
+            </div>
+        </div>
+
+        
+
+        <section class="body">
+            <h1 id="1-introduction">1. Introduction</h1>
+<p>This article is the second in a three-part series on building a decentralized exchange with Move on the IOTA Rebased network. In this series, we develop a Move smart contract for a DEX based on the <strong>Liquidity Book</strong> (LB) model.</p>
+<p>In the previous article, we dove into how the LB model executes swaps between any token pair <code>L</code> and <code>R</code>. We set up functions to create LB pools and execute swaps inside them. This was an important first step, but our smart contract wasn't yet finished: Liquidity Providers, a crucial element of any DEX protocol, were still missing. That's what we will be adding in this article.</p>
+<p>This smart contract expansion is split into two parts. The first half discusses how to add liquidity provision (supplying and withdrawing liquidity). The second half discusses how to integrate fees into the smart contract, which earn liquidity providers money over time.</p>
+<h2 id="1-1-article-series">1.1 Article Series</h2>
+<p>Though there are many beginner tutorials for Move, intermediate tutorials can be harder to find. Having familiarized themselves with the basics, developers often wonder: How do I actually build something with this? The scarcity of intermediate tutorials is unfortunate, because they can really help bridge the gap between basic understanding and practical application. This article series is an attempt to fill that gap. It tries to do this by walking through an example of building a relatively complex Move application: a decentralized exchange. The building of this smart contract is split up into three parts:</p>
+<ol>
+<li>
+<p>The <a href="../iota-move-dex-pt1/">first part</a> walks through the first steps of writing a Move smart contract implementing the LB DEX model.</p>
+</li>
+<li>
+<p>The second part (this one) describes how the DEX smart contract can be expanded to include fees and Liquidity Providers. </p>
+</li>
+<li>
+<p>The <a href="../iota-move-dex-pt3/">third part</a> dives into <em>testing</em> Move smart contracts, which is crucial in gaining confidence that your Move does what it's supposed to do. </p>
+</li>
+</ol>
+<h2 id="1-2-before-we-go-on">1.2 Before We Go On</h2>
+<p>This article builds upon the first article in this series. Make sure to work through it (or at least read it) before you dive into this one, otherwise this article will not make much sense. </p>
+<p>In this article, we expand on the code from the previous article. If you want to be sure that you're starting off with the right code, you can copy it from <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-liquidity-book/tree/pt-1">the pt-1 branch of the reference implementation on GitHub</a>.</p>
+<p>In this article, we will make some major changes to the DEX smart contract. This will cause some of the tests that we wrote in part 1 (and any tests you may have written yourself) to fail. We will fix these issues, and also expand greatly on the suite of tests in the next article. </p>
+<h2 id="1-3-acknowledgements">1.3 Acknowledgements</h2>
+<p><em>Many thanks to <a rel="noopener" target="_blank" href="https://iotalabs.io/">iotalabs</a> for supporting this article series with a grant.</em></p>
+<h1 id="2-liquidity-providers">2. Liquidity Providers</h1>
+<p>We will start by adding functionality for supplying and withdrawing liquidity. To simplify the process, we imagine that fees don't exist at all. We will just focus on creating functions to supply and withdraw liquidity to an LB <code>Pool</code>. </p>
+<h2 id="2-1-doing-some-accounting">2.1 Doing Some Accounting</h2>
+<p>We want to expand our smart contract so that anyone can provide liquidity in a <code>Pool</code>. Obviously, if someone deposits liquidity in a <code>Pool</code>, they will at some point want it back. In conclusion: we need to keep track of who is providing liquidity in a pool. </p>
+<p>For many DEXs, this is done through the use of <em>LP Tokens</em>. These LP Tokens directly represent a share of the total pool liquidity. When you have 1 LP token for a pool that has 100 LP Tokens in total, when you withdraw, you get 1/100th of the total pool funds. </p>
+<p>However, using LP Tokens only works when all the liquidity of a pool is mixed together, like in a constant-product liquidity pool. We are using Liquidity Book pools, where liquidity is distributed over discrete bins, which means that we will want to return liquidity to a liquidity provider only from the bins where they provided it. So, we will refine the LP Token model to keep track of provided liquidity.</p>
+<h2 id="2-2-money-back-guarantee-as-long-as-you-have-your-receipt-defining-the-liquidityproviderreceipt-type">2.2 Money Back Guarantee (As Long As You Have Your Receipt) - Defining The <code>LiquidityProviderReceipt</code> Type</h2>
+<p>To keep track of provided liquidity, we will give LP's a <code>LiquidityProviderReceipt</code>, which keeps a per-bin record of how much liquidity they provided. This will still function much like LP Tokens: When an LP wants to get back their liquidity, they can redeem this receipt for the provided liquidity plus any earned fees. The big difference with LP Tokens is that receipts only return liquidity from bins where it was provided. </p>
+<p>Let's go to our file <code>liquidity_book.move</code> and define the <code>LiquidityProviderReceipt</code> type:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>public </span><span style="color:#b48ead;">struct </span><span>LiquidityProviderReceipt has key, store {
+</span><span>    </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>    </span><span style="color:#bf616a;">pool_id</span><span>: ID, </span><span style="color:#65737e;">// The id that the liquidity was provided in
+</span><span>    </span><span style="color:#bf616a;">deposit_time_ms</span><span>: </span><span style="color:#b48ead;">u64</span><span>, </span><span style="color:#65737e;">// Timestamp from the moment the liquidity was provided
+</span><span>    </span><span style="color:#bf616a;">liquidity</span><span>: vector&lt;BinProvidedLiquidity&gt; </span><span style="color:#65737e;">// A per-bin record of how much liquidity was provided
+</span><span>}
+</span></code></pre>
+<p>We keep a <code>pool_id</code> in the receipt so that we can make sure that on withdrawal, the receipt was not meant for some other pool. </p>
+<p>The <code>deposit_time_ms</code> field will be used when distributing fees on withdrawal. We want to make sure that LP's don't earn fees from trades that happened before they provided liquidity. </p>
+<p>The last field <code>liquidity</code> keeps track of in which bins liquidity was provided and how much. We will define a custom type <code>BinProvidedLiquidity</code> representing the liquidity in one bin.</p>
+<p>We define the <code>BinProvidedLiquidity</code> above the <code>LiquidityProviderReceipt</code> type as follows:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>public </span><span style="color:#b48ead;">struct </span><span>BinProvidedLiquidity has store, copy, drop {
+</span><span>    </span><span style="color:#bf616a;">bin_id</span><span>: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    </span><span style="color:#bf616a;">left</span><span>: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    </span><span style="color:#bf616a;">right</span><span>: </span><span style="color:#b48ead;">u64
+</span><span>}
+</span><span>
+</span><span>public </span><span style="color:#b48ead;">struct </span><span>LiquidityProviderReceipt has key, store {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">pool_id</span><span>: ID, </span><span style="color:#65737e;">// The id that the liquidity was provided in
+</span><span>        </span><span style="color:#bf616a;">deposit_time_ms</span><span>: </span><span style="color:#b48ead;">u64</span><span>, </span><span style="color:#65737e;">// Timestamp from the moment the liquidity was provided
+</span><span>        </span><span style="color:#bf616a;">liquidity</span><span>: vector&lt;BinProvidedLiquidity&gt; </span><span style="color:#65737e;">// A record of how much liquidity was provided
+</span><span>    }
+</span></code></pre>
+<p>You might wonder why we need the <code>BinProvidedLiquidity</code> type, given that it's basically a wrapper around a triple of <code>u64</code>s. Why can't we use <code>liquidity: vector&lt;(u64, u64, u64)&gt;</code>? This is because tuples aren't first-class values, as explained <a rel="noopener" target="_blank" href="https://move-book.com/reference/primitive-types/tuples.html">here in The Move Reference</a>. This means, among other things, that tuples can't be used to instantiate generics. Note that even if using tuples was possible here, using the custom type strongly improves the readability of some of the code we will write later.</p>
+<h2 id="2-3-printing-receipts-or-providing-liquidity">2.3 Printing Receipts, or Providing Liquidity</h2>
+<p>Now, let's define a function to provide liquidity and return an instance of this new <code>LiquidityProviderReceipt</code> type. We will extract the code for distributing the liquidity across bins from the <code>new</code> function, and put this logic into a function <code>provide_liquidity_uniformly</code>. We will make just a few small changes. We will not go over this code in detail since it's covered in some detail in the previous article. The primary addition here is the creation of the <code>LiquidityProviderReceipt</code> and adding a <code>BinProvidedLiquidity</code> entry in the <code>liquidity</code> vector every time we add liquidity to a bin. These changes are denoted with <code>!NEW!</code> in the comments of the code to make it easy to spot them.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Add liquidity to the pool around the active bin with a uniform distribution
+</span><span style="color:#65737e;">/// of the tokens amongst those bins.
+</span><span>public fun provide_liquidity_uniformly&lt;L, R&gt;(
+</span><span>    </span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;,
+</span><span>    bin_count: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    </span><span style="color:#b48ead;">mut</span><span> coin_left: Coin&lt;L&gt;,
+</span><span>    </span><span style="color:#b48ead;">mut</span><span> coin_right: Coin&lt;R&gt;,
+</span><span>    clock: &amp;Clock,
+</span><span>    ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext
+</span><span>): LiquidityProviderReceipt {
+</span><span>    </span><span style="color:#65737e;">// An odd number of bins is required, so that, including the active
+</span><span>    </span><span style="color:#65737e;">// bin, there is liquidity added to an equal amount of bins to the left
+</span><span>    </span><span style="color:#65737e;">// and right of the active bins
+</span><span>    assert!(bin_count % </span><span style="color:#d08770;">2 </span><span>== </span><span style="color:#d08770;">1</span><span>, EEvenBincount);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// !NEW!
+</span><span>    </span><span style="color:#65737e;">// Assert some minimal amount of liquidity is added
+</span><span>    assert!(coin_left.</span><span style="color:#96b5b4;">value</span><span>() &gt; </span><span style="color:#d08770;">0 </span><span>|| coin_right.</span><span style="color:#96b5b4;">value</span><span>() &gt; </span><span style="color:#d08770;">0</span><span>,
+</span><span>        ENoLiquidityProvided);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> active_bin_id = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_active_bin_id</span><span>();
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bins_each_side = (bin_count - </span><span style="color:#d08770;">1</span><span>) / </span><span style="color:#d08770;">2</span><span>; </span><span style="color:#65737e;">// the amount of bins left and right of the active bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_step_price_factor = ufp256::from_fraction((</span><span style="color:#d08770;">ONE_BPS </span><span>+ </span><span style="color:#bf616a;">self</span><span>.bin_step_bps) as u256, </span><span style="color:#d08770;">ONE_BPS </span><span>as u256);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// !NEW!
+</span><span>    </span><span style="color:#65737e;">// Create receipt that will function as proof of providing liquidity
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> receipt = LiquidityProviderReceipt {
+</span><span>        id: object::new(ctx),
+</span><span>        pool_id: </span><span style="color:#bf616a;">self</span><span>.id.</span><span style="color:#96b5b4;">to_inner</span><span>(),
+</span><span>        deposit_time_ms: clock.</span><span style="color:#96b5b4;">timestamp_ms</span><span>(), </span><span style="color:#65737e;">// timestamp with `Clock`
+</span><span>        liquidity: vector::empty()
+</span><span>    };
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Add left bins
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left_per_bin = coin_left.</span><span style="color:#96b5b4;">value</span><span>() / (bins_each_side + </span><span style="color:#d08770;">1</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> new_bin_price = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_active_price</span><span>().</span><span style="color:#96b5b4;">div</span><span>(bin_step_price_factor);
+</span><span>    </span><span style="color:#d08770;">1</span><span style="color:#b48ead;">u64</span><span>.range_do_eq!(bins_each_side, |</span><span style="color:#bf616a;">n</span><span>| {
+</span><span>        </span><span style="color:#65737e;">// Initialize new bin
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin_id = active_bin_id - n;
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">add_bin</span><span>(new_bin_id, new_bin_price);
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_bin_mut</span><span>(new_bin_id);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Add balance to new bin
+</span><span>        </span><span style="color:#b48ead;">let</span><span> balance_for_bin = coin_left.</span><span style="color:#96b5b4;">split</span><span>(coin_left_per_bin, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>();
+</span><span>        new_bin.balance_left.</span><span style="color:#96b5b4;">join</span><span>(balance_for_bin);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// !NEW!
+</span><span>        </span><span style="color:#65737e;">// Update receipt
+</span><span>        receipt.liquidity.</span><span style="color:#96b5b4;">push_back</span><span>(BinProvidedLiquidity{
+</span><span>            bin_id: new_bin_id,
+</span><span>            left: coin_left_per_bin,
+</span><span>            right: </span><span style="color:#d08770;">0
+</span><span>        });
+</span><span>        new_bin_price = new_bin_price.</span><span style="color:#96b5b4;">div</span><span>(bin_step_price_factor);
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Add right bins
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right_per_bin = coin_right.</span><span style="color:#96b5b4;">value</span><span>() / (bins_each_side + </span><span style="color:#d08770;">1</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> new_bin_price = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_active_price</span><span>().</span><span style="color:#96b5b4;">mul</span><span>(bin_step_price_factor);
+</span><span>    </span><span style="color:#d08770;">1</span><span style="color:#b48ead;">u64</span><span>.range_do_eq!(bins_each_side, |</span><span style="color:#bf616a;">n</span><span>| {
+</span><span>        </span><span style="color:#65737e;">// Initialize new bin
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin_id = active_bin_id + n;
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">add_bin</span><span>(new_bin_id, new_bin_price);
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_bin_mut</span><span>(new_bin_id);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Add balance to new bin
+</span><span>        </span><span style="color:#b48ead;">let</span><span> balance_for_bin = coin_right.</span><span style="color:#96b5b4;">split</span><span>(coin_right_per_bin, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>();
+</span><span>        new_bin.balance_right.</span><span style="color:#96b5b4;">join</span><span>(balance_for_bin);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// !NEW!
+</span><span>        </span><span style="color:#65737e;">// Update receipt
+</span><span>        receipt.liquidity.</span><span style="color:#96b5b4;">push_back</span><span>(BinProvidedLiquidity{
+</span><span>            bin_id: new_bin_id,
+</span><span>            left: </span><span style="color:#d08770;">0</span><span>,
+</span><span>            right: coin_right_per_bin
+</span><span>        });
+</span><span>        new_bin_price = new_bin_price.</span><span style="color:#96b5b4;">mul</span><span>(bin_step_price_factor);
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Add remaining liquidity to the active bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> amount_left_active_bin = coin_left.</span><span style="color:#96b5b4;">value</span><span>();
+</span><span>    </span><span style="color:#b48ead;">let</span><span> amount_right_active_bin = coin_right.</span><span style="color:#96b5b4;">value</span><span>();
+</span><span>    </span><span style="color:#b48ead;">let</span><span> active_bin = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_active_bin_mut</span><span>();
+</span><span>    active_bin.balance_left.</span><span style="color:#96b5b4;">join</span><span>(coin_left.</span><span style="color:#96b5b4;">into_balance</span><span>());
+</span><span>    active_bin.balance_right.</span><span style="color:#96b5b4;">join</span><span>(coin_right.</span><span style="color:#96b5b4;">into_balance</span><span>());
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// !NEW!
+</span><span>    </span><span style="color:#65737e;">// Update receipt for liquidity provided in the pool.active_bin
+</span><span>    receipt.liquidity.</span><span style="color:#96b5b4;">push_back</span><span>(BinProvidedLiquidity{
+</span><span>        bin_id: </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_active_bin_id</span><span>(),
+</span><span>        left: amount_left_active_bin,
+</span><span>        right: amount_right_active_bin
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Return receipt
+</span><span>    receipt
+</span><span>}
+</span></code></pre>
+<p>If you copy-pasted the above code into your project, you will see some errors. Let's fix these:</p>
+<ul>
+<li><code>Clock</code> is not a recognized type. Import it at the top of your file with <code>use iota::clock::Clock</code>. (We use the <code>Clock</code> for timestamping receipts.)</li>
+<li><code>ENoLiquidityProvided</code> is not recognized since it's a new error. Add it in the same way as the errors we defined previously with a relevant error message (like 'No tokens supplied.'). We throw this error to prevent creating a receipt when no liquidity is provided.</li>
+<li>The functions <code>get_bin_mut</code> and <code>add_bin</code> are not yet defined. Add these to your <code>liquidity_book</code> module. The definitions are shown below.</li>
+</ul>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Private mutable accessor for pool bin with id `id`.
+</span><span>fun get_bin_mut&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;, id: </span><span style="color:#b48ead;">u64</span><span>): &amp;</span><span style="color:#b48ead;">mut </span><span>PoolBin&lt;L, R&gt;{
+</span><span>    </span><span style="color:#bf616a;">self</span><span>.bins.</span><span style="color:#96b5b4;">get_mut</span><span>(&amp;id)
+</span><span>}
+</span><span>
+</span><span style="color:#65737e;">/// Add a bin to a pool at a particular price if it doesn&#39;t exist yet.
+</span><span>fun add_bin&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;, id: </span><span style="color:#b48ead;">u64</span><span>, price: </span><span style="color:#d08770;">UFP256</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(!</span><span style="color:#bf616a;">self</span><span>.bins.</span><span style="color:#96b5b4;">contains</span><span>(&amp;id)) {
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.bins.</span><span style="color:#96b5b4;">insert</span><span>(id, PoolBin {
+</span><span>            price: price,
+</span><span>            balance_left: balance::zero&lt;L&gt;(),
+</span><span>            balance_right: balance::zero&lt;R&gt;()
+</span><span>        });
+</span><span>    };
+</span><span>}
+</span></code></pre>
+<p>Now that we have separate logic for adding liquidity to <code>Pool</code>s, we should probably remove it from the <code>new</code> function. By removing any references to initial liquidity, the <code>new</code> function simplifies to this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Create a new Liquidity Book `Pool`
+</span><span>entry fun new&lt;L, R&gt;(
+</span><span>    bin_step_bps: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    starting_price_mantissa: u256,
+</span><span>    ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext
+</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_price = ufp256::new(starting_price_mantissa);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_bin = PoolBin {
+</span><span>        price: starting_price,
+</span><span>        balance_left: balance::zero&lt;L&gt;(),
+</span><span>        balance_right: balance::zero&lt;R&gt;(),
+</span><span>    };
+</span><span>    </span><span style="color:#65737e;">// Start the first bin with ID in the middle of the u64 range, so as the
+</span><span>    </span><span style="color:#65737e;">// number of bins increase, the ID&#39;s don&#39;t over- or underflow
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_bin_id = </span><span style="color:#d08770;">MID_U64</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> bins = vec_map::empty();
+</span><span>    bins.</span><span style="color:#96b5b4;">insert</span><span>(
+</span><span>        starting_bin_id,
+</span><span>        starting_bin
+</span><span>    );
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Create and share the pool
+</span><span>    </span><span style="color:#b48ead;">let</span><span> pool = Pool&lt;L, R&gt; {
+</span><span>        id: object::new(ctx),
+</span><span>        bins,
+</span><span>        active_bin_id: starting_bin_id,
+</span><span>        bin_step_bps,
+</span><span>    };
+</span><span>    transfer::share_object(pool);
+</span><span>}
+</span></code></pre>
+<h2 id="2-4-getting-your-money-back">2.4 Getting Your Money Back</h2>
+<p>Now, let's look at how a receipt can be redeemed for liquidity. It's pretty straightforward: we loop over the <code>liquidity</code> as specified by the receipt, and collect the funds from each bin. If the bin doesn't contain the provided <code>L</code> tokens, we pay out as much <code>L</code> as we can and pay out the rest in <code>R</code> (equivalent to the remainder of <code>L</code>). And the same thing goes the other way around: If the bin doesn't contain the provided <code>R</code> tokens, we pay out as much <code>R</code> as we can and pay out the rest in <code>L</code> (equivalent to the remainder of <code>R</code>). It's a large block of code, but hopefully it's still doable to read through it (especially with the left-right symmetry). Some parts are also treated in more detail after the block of code.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Withdraw all provided liquidity from `pool` using a
+</span><span style="color:#65737e;">/// `LiquidityProviderReceipt`.
+</span><span>public fun withdraw_liquidity&lt;L, R&gt; (
+</span><span>    </span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;,
+</span><span>    receipt: LiquidityProviderReceipt,
+</span><span>    ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext
+</span><span>):
+</span><span>    (Coin&lt;L&gt;, Coin&lt;R&gt;)
+</span><span>{
+</span><span>    </span><span style="color:#b48ead;">let</span><span> LiquidityProviderReceipt {id: receipt_id, pool_id: receipt_pool_id, deposit_time_ms, liquidity: </span><span style="color:#b48ead;">mut</span><span> provided_liquidity} = receipt;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Make sure that the receipt was given for liquidity in this pool
+</span><span>    assert!(</span><span style="color:#bf616a;">self</span><span>.id.</span><span style="color:#96b5b4;">to_inner</span><span>() == receipt_pool_id, EInvalidPoolID);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> result_coin_left = coin::zero&lt;L&gt;(ctx);
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> result_coin_right = coin::zero&lt;R&gt;(ctx);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">while </span><span>(!provided_liquidity.</span><span style="color:#96b5b4;">is_empty</span><span>()) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> receipt_bin_liquidity = provided_liquidity.</span><span style="color:#96b5b4;">pop_back</span><span>();
+</span><span>        </span><span style="color:#b48ead;">let</span><span> bin = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_bin_mut</span><span>(receipt_bin_liquidity.bin_id);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Withdraw left liquidity
+</span><span>        </span><span style="color:#b48ead;">let</span><span> payout_left_amount = receipt_bin_liquidity.left + fees_earned_left;
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(bin.balance_left.</span><span style="color:#96b5b4;">value</span><span>() &gt;= payout_left_amount) {
+</span><span>            result_coin_left.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_left.</span><span style="color:#96b5b4;">split</span><span>(payout_left_amount).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>        } </span><span style="color:#b48ead;">else </span><span>{
+</span><span>            </span><span style="color:#b48ead;">let</span><span> remainder = payout_left_amount - bin.balance_left.</span><span style="color:#96b5b4;">value</span><span>();
+</span><span>            result_coin_left.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_left.</span><span style="color:#96b5b4;">withdraw_all</span><span>().</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>            </span><span style="color:#b48ead;">let mut</span><span> remainder_as_r = bin.price.</span><span style="color:#96b5b4;">mul_u64</span><span>(remainder);
+</span><span>            </span><span style="color:#65737e;">// Sometimes due to rounding, the bin might contain 1 RIGHT
+</span><span>            </span><span style="color:#65737e;">// &#39;too little&#39;, in which case `remainder_as_r - 1` is returned
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(remainder_as_r == bin.balance_right.</span><span style="color:#96b5b4;">value</span><span>() + </span><span style="color:#d08770;">1</span><span>) {
+</span><span>                remainder_as_r = remainder_as_r - </span><span style="color:#d08770;">1</span><span>;
+</span><span>            };
+</span><span>            result_coin_right.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_right.</span><span style="color:#96b5b4;">split</span><span>(remainder_as_r).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// The same withdrawal process, but for right liquidity
+</span><span>        </span><span style="color:#b48ead;">let</span><span> payout_right_amount = receipt_bin_liquidity.right + fees_earned_right;
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(bin.balance_right.</span><span style="color:#96b5b4;">value</span><span>() &gt;= payout_right_amount) {
+</span><span>            result_coin_right.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_right.</span><span style="color:#96b5b4;">split</span><span>(payout_right_amount).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>        } </span><span style="color:#b48ead;">else </span><span>{
+</span><span>            </span><span style="color:#b48ead;">let</span><span> remainder = payout_right_amount - bin.balance_right.</span><span style="color:#96b5b4;">value</span><span>();
+</span><span>            result_coin_right.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_right.</span><span style="color:#96b5b4;">withdraw_all</span><span>().</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>            </span><span style="color:#b48ead;">let mut</span><span> remainder_as_l = bin.price.</span><span style="color:#96b5b4;">div_u64</span><span>(remainder);
+</span><span>            </span><span style="color:#65737e;">// Sometimes due to rounding, the bin might contain 1 LEFT
+</span><span>            </span><span style="color:#65737e;">// &#39;too little&#39;, in which case `remainder_as_l - 1` is returned
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(remainder_as_l == bin.balance_left.</span><span style="color:#96b5b4;">value</span><span>() + </span><span style="color:#d08770;">1</span><span>) {
+</span><span>                remainder_as_l = remainder_as_l - </span><span style="color:#d08770;">1</span><span>;
+</span><span>            };
+</span><span>            result_coin_left.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_left.</span><span style="color:#96b5b4;">split</span><span>(remainder_as_l).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>        };
+</span><span>    };
+</span><span>    provided_liquidity.</span><span style="color:#96b5b4;">destroy_empty</span><span>();
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Delete the receipt so liquidity can&#39;t be withdrawn twice
+</span><span>    object::delete(receipt_id);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Return the coins
+</span><span>    (result_coin_left, result_coin_right)
+</span><span>}
+</span></code></pre>
+<p>There are a few things of note here. Let's go over them.</p>
+<p>The first notable thing is this &quot;one token too little&quot;. This happens sometimes when multiple multiplications and divisions are performed in sequence, causing (very small) rounding errors. This may start occurring especially when we increase the number of computations through adding fees. This is a quirk of fixed-point numbers. Under the hood, fixed-point numbers are represented by whole integers, so when you calculate a <code>1/3</code>, floor division is applied to the integers representing the <code>1</code> and <code>3</code> value, and you will get something ever so slightly smaller than <code>1/3</code>.</p>
+<p>The next notable thing here is that, since a <code>LiquidityProviderReceipt</code> is non-drop, we have to unpack it (first line of the function) and then explicitly delete the object with <code>object::delete(receipt_id)</code>. (To be precise, unwrapping the receipt gives a <code>receipt_id</code> of type <code>UID</code> which is non-drop. Calling <code>object::delete</code> on <code>receipt_id</code> is the only way to not get an error. This enforces that the non-drop <code>LiquidityProviderReceipt</code> type can only be destroyed/deleted when done so explicitly inside our module.)</p>
+<p>Also, at the beginning of the withdrawal function, we make sure that the <code>Pool</code> ID on the receipt and the actual <code>Pool</code> ID match up. We define a new error for this next to the other errors:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#bf616a;">error</span><span>]
+</span><span style="color:#b48ead;">const</span><span> EInvalidPoolID: vector&lt;</span><span style="color:#b48ead;">u8</span><span>&gt; =
+</span><span>    </span><span style="color:#b48ead;">b</span><span>&quot;</span><span style="color:#a3be8c;">Mismatched Pool ID: The Pool ID in the receipt does not match the Pool ID for withdrawal.</span><span>&quot;;
+</span></code></pre>
+<h2 id="2-5-provide-away">2.5 Provide Away!</h2>
+<p>And that's it! Liquidity Providers can now provide liquidity to our <code>Pool</code>s. We will dive into how to confirm that this indeed works as intended using tests in the next article. For now, let's continue with another important addition to our smart contract: Fees.</p>
+<h1 id="3-it-s-not-free-there-s-a-fee">3. It's Not Free, There's a Fee</h1>
+<p>Integrating fees seems simple at first. When a user executes a swap, just keep a percentage of  the input tokens as a fee. </p>
+<p>But this simplicity is deceiving: implementing fees turns out to be quite involved. The first step, charging the user extra, is really not very complicated; the difficulty of implementing fees lies in distributing them fairly to liquidity providers <em>after</em> they have been collected.</p>
+<h2 id="3-1-fee-system-properties">3.1 Fee System Properties</h2>
+<p>There are a few properties of our new fee system that most likely we will agree on are desirable:</p>
+<ul>
+<li>Fees generated should be distributed to liquidity providers in proportion to the share of the total bin liquidity.</li>
+<li>Fees generated need to be distributed only to liquidity providers who were providing liquidity when a trade is executed. We don't want users to be able to &quot;hijack fees&quot; by becoming liquidity providers <em>after</em> fees have been generated. </li>
+<li>If a user swaps L for R, we would like the generated fee (paid in L) to only be paid out to R liquidity providers. This will turn out to be challenging. </li>
+</ul>
+<p>We will have to consider some things before we can decide how exactly we will implement fees.</p>
+<h2 id="3-2-keeping-track">3.2 Keeping Track</h2>
+<p>Let's consider some things.</p>
+<h3 id="3-2-1-two-systems">3.2.1 Two Systems</h3>
+<p>First, let's consider how we should keep track of generated fees, and at what point in the supply-swap-withdraw pool lifecycle these fees should be distributed to LP's. Let's consider two ways.</p>
+<ol>
+<li>Expand the <code>PoolBin</code> struct to hold a list of all the LP's and the total amount of fees they have earned. When a swap is executed, immediately calculate how much of the generated fee each LP has a right to (in proportion to the share of the liquidity each provided), and add it to their total.</li>
+<li>Expand the <code>PoolBin</code> struct to hold a log of generated fees. When an LP goes to withdraw their liquidity, we loop over all generated fees and calculate what share they should get. Earned fees and provided liquidity are returned together.</li>
+</ol>
+<p>The advantage of the method 1 is that you wouldn't need to keep track of individual fees, which could clog the <code>Pool</code> object when a lot of swaps are happening in it. It also has a big disadvantage, however: The swapping user pays for the computation needed to calculate how much of the paid fee goes to each LP. Additionally, this design seems less &quot;pure&quot;. Consider that this method would require keeping information about particular LP's in the state of a pool. This is counter to the whole idea of a <code>LiquidityProviderReceipt</code>. These receipts represent an LP's ownership of a share of a pool (or pool bin), separating pool ownership out from the pool state.</p>
+<h3 id="3-2-2-our-implementation">3.2.2 Our Implementation</h3>
+<p>For the reasons described above, we will implement <strong>method 2</strong>. In general terms, we will implement fees like this:</p>
+<ul>
+<li>Fees are always paid by deducting part of the paid coin. The fees are kept in the balances of the bin where the fee was generated. This has the benefit of making generated fees available as trading liquidity.</li>
+<li>We expand the <code>PoolBin</code> struct to hold a log of all generated fees. Together with the generated fee amount, we will store the total bin liquidity, and a timestamp. The total bin liquidity helps divide generated fees fairly (in proportion to liquidity share), and the timestamp is used to prevent &quot;fee hijacking&quot;.</li>
+<li>Though fees will be shared in proportion to bin share, we will not differentiate between supplying <code>L</code> or <code>R</code>. That is, a fee generated from an <code>L</code> to <code>R</code> swap is distributed to both <code>L</code> and <code>R</code> liquidity providers of that bin (instead of to just LP's that provided <code>R</code>). </li>
+</ul>
+<p>There is a good reason for this last design choice, by which we choose to abandon our third desired property. The reason is that, after all the <code>L</code> in a bin is swapped for <code>R</code>, there is no longer any way to discern <code>L</code> and <code>R</code> liquidity providers. Everyone is then an <code>R</code> liquidity provider. (Though it is technically possible to keep track of these shifts in liquidity, that would be problematic for the same reason as before: it's computationally very expensive, and the user that swaps would have to pay gas for it.) </p>
+<h2 id="3-3-generating-fees-code">3.3 Generating Fees: Code</h2>
+<p>Now that all the design decisions are out of the way, it's time to start coding.</p>
+<h3 id="3-3-1-structs">3.3.1 Structs</h3>
+<p>We start out once again by defining and modifying some structs. First and foremost: The <code>FeeLogEntry</code>:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Type for keeping track of generated fees inside a pool.
+</span><span>public </span><span style="color:#b48ead;">struct </span><span>FeeLogEntry has store, copy, drop {
+</span><span>    </span><span style="color:#bf616a;">amount</span><span>: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    </span><span style="color:#bf616a;">timestamp_ms</span><span>: </span><span style="color:#b48ead;">u64</span><span>, </span><span style="color:#65737e;">// Timestamp from when the fee was generated
+</span><span>    </span><span style="color:#bf616a;">total_bin_size_as_r</span><span>: </span><span style="color:#b48ead;">u64 </span><span style="color:#65737e;">// The amount of tokens in the bin (expressed in just one token)
+</span><span>}
+</span></code></pre>
+<p>As mentioned above, we want to prevent &quot;fee hijacking&quot;. To this end we keep a timestamp on the <code>FeeLogEntry</code>. We also save the total bin size as <code>R</code> so that we can distribute the fee fairly to withdrawing LP's. The choice for <code>R</code> instead of <code>L</code> is very practical: Converting an amount of <code>R</code> to <code>L</code> requires a division, which is more likely to result in rounding errors (than the multiplication required to convert from <code>L</code> to <code>R</code>).</p>
+<p>We will create a <code>FeeLogEntry</code> every time a fee is generated and save it in the bin where the swap happened. Let's modify the <code>PoolBin</code> struct accordingly:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>public </span><span style="color:#b48ead;">struct </span><span>PoolBin&lt;phantom L, phantom R&gt; has store {
+</span><span>    </span><span style="color:#bf616a;">price</span><span>: UFP256, </span><span style="color:#65737e;">// The trading price inside this bin
+</span><span>    </span><span style="color:#bf616a;">balance_left</span><span>: Balance&lt;L&gt;,
+</span><span>    </span><span style="color:#bf616a;">balance_right</span><span>: Balance&lt;R&gt;,
+</span><span>    </span><span style="color:#65737e;">// Fee logs keep track of generated fees inside this bin.
+</span><span>    </span><span style="color:#bf616a;">fee_log_left</span><span>: vector&lt;FeeLogEntry&gt;,
+</span><span>    </span><span style="color:#bf616a;">fee_log_right</span><span>: vector&lt;FeeLogEntry&gt;,
+</span><span>    </span><span style="color:#65737e;">// Keeps track of the total provided tokens, without any fees:
+</span><span>    </span><span style="color:#bf616a;">provided_left</span><span>: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    </span><span style="color:#bf616a;">provided_right</span><span>: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>}
+</span></code></pre>
+<p>When we create a fee log, we need to calculate the total provided liquidity in a bin (to distribute fees in proportion to bin share). Since we will be storing fees directly inside the <code>PoolBin</code> balances, we won't be able to read off the total provided liquidity from these balances. So we also keep a <code>provided_left</code> and <code>provided_right</code> variables that keep track of how much liquidity of each was provided in the bin in total.</p>
+<p>We use a vector here to keep things simple. If you used a design like this at scale, you would be at risk of hitting the object size limit, as more and more <code>FeeLogEntry</code>s accrue inside a <code>Pool</code>. To get around this, in practice you would use a <a rel="noopener" target="_blank" href="https://docs.iota.org/references/framework/iota-framework/table">table</a>.</p>
+<p>The last modification to a struct is a small one: We add a <code>fee_bps</code> parameter to the <code>Pool</code>, which gives the pool fee in basis points (a basis point is 0.01%).</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move 
+</span><span>public </span><span style="color:#b48ead;">struct </span><span>Pool&lt;phantom L, phantom R&gt; has key {
+</span><span>    </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>    </span><span style="color:#bf616a;">bins</span><span>: VecMap&lt;</span><span style="color:#b48ead;">u64</span><span>, PoolBin&lt;L, R&gt;&gt;, </span><span style="color:#65737e;">// bins are identified with a unique id
+</span><span>    </span><span style="color:#bf616a;">active_bin_id</span><span>: </span><span style="color:#b48ead;">u64</span><span>, </span><span style="color:#65737e;">// id of the active bin
+</span><span>    </span><span style="color:#bf616a;">bin_step_bps</span><span>: </span><span style="color:#b48ead;">u64</span><span>, </span><span style="color:#65737e;">// The step/delta between bins in basis points (0.0001)
+</span><span>    </span><span style="color:#bf616a;">fee_bps</span><span>: </span><span style="color:#b48ead;">u64</span><span>, </span><span style="color:#65737e;">// The base fee for a swap
+</span><span>}
+</span></code></pre>
+<p>Make sure to resolve any errors that now occur for <code>PoolBin</code> and <code>Pool</code> initializations by adding the newly added fields where necessary, for example in the <code>new</code> function. Add <code>fee_bps</code> as an argument to <code>new</code> as well. The result is this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>entry fun new&lt;L, R&gt;(
+</span><span>    bin_step_bps: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    starting_price_mantissa: u256,
+</span><span>    fee_bps: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext
+</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_price = ufp256::new(starting_price_mantissa);
+</span><span>    </span><span style="color:#65737e;">// Initialize PoolBin with default values
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_bin = PoolBin {
+</span><span>        price: starting_price,
+</span><span>        balance_left: balance::zero&lt;L&gt;(),
+</span><span>        balance_right: balance::zero&lt;R&gt;(),
+</span><span>        fee_log_left: vector::empty(),
+</span><span>        fee_log_right: vector::empty(),
+</span><span>        provided_left: </span><span style="color:#d08770;">0</span><span>,
+</span><span>        provided_right: </span><span style="color:#d08770;">0</span><span>,
+</span><span>    };
+</span><span>    ... </span><span style="color:#65737e;">// other stuff
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// If you&#39;d like, you can also set a maximum pool fee like this.
+</span><span>    </span><span style="color:#65737e;">// You will need to define MAX_BASE_FEE_BPS as a constant.
+</span><span>    </span><span style="color:#b48ead;">let</span><span> fee_bps = fee_bps.</span><span style="color:#96b5b4;">min</span><span>(</span><span style="color:#d08770;">MAX_BASE_FEE_BPS</span><span>);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Pool now with `fee_bps`
+</span><span>    </span><span style="color:#b48ead;">let</span><span> pool = Pool&lt;L, R&gt; {
+</span><span>        id: object::new(ctx),
+</span><span>        bins,
+</span><span>        active_bin_id: starting_bin_id,
+</span><span>        bin_step_bps,
+</span><span>        fee_bps,
+</span><span>    };
+</span><span>}
+</span></code></pre>
+<h3 id="3-3-2-fee-integration">3.3.2 Fee Integration</h3>
+<p>Now that we have added the relevant structs, it's time to actually implement fees. </p>
+<p>Let's start out with the place where fees are <em>created</em>, and that is during a swap. Let's take a look at the new <code>swap_ltr</code> code. Although the function is now quite lengthy, try reading through the whole thing. All changes are once again annotated with <code>// !NEW!</code>, and have explanatory comments above them to make it easier to follow along. We will also cover some aspects of the code in more depth underneath the code block to make sure it's all clear.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// Swap `coin_left` for an equivalent amount of `R` in a `Pool`
+</span><span>public fun swap_ltr&lt;L, R&gt;(
+</span><span>    </span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;, 
+</span><span>    </span><span style="color:#b48ead;">mut</span><span> coin_left: Coin&lt;L&gt;, 
+</span><span>    clock: &amp;Clock, 
+</span><span>    ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext
+</span><span>): Coin&lt;R&gt; {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> result_coin = coin::zero&lt;R&gt;(ctx);
+</span><span>    </span><span style="color:#65737e;">// !NEW!
+</span><span>    </span><span style="color:#b48ead;">let</span><span> fee_bps = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">fee_bps</span><span>();
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Keep emptying bins until `coin_left` is fully swapped
+</span><span>    </span><span style="color:#b48ead;">while </span><span>(coin_left.</span><span style="color:#96b5b4;">value</span><span>() &gt; </span><span style="color:#d08770;">0</span><span>) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> active_bin = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_active_bin_mut</span><span>();
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// !NEW!
+</span><span>        </span><span style="color:#65737e;">// Calculate the absolute amount in `L` that will be paid as a fee.
+</span><span>        </span><span style="color:#65737e;">// Calculate swap output `swap_right` with the fee subtracted from
+</span><span>        </span><span style="color:#65737e;">// the input amount `swap_left`. 
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> fee = </span><span style="color:#96b5b4;">get_fee</span><span>(coin_left.</span><span style="color:#96b5b4;">value</span><span>(), fee_bps);
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> swap_left = coin_left.</span><span style="color:#96b5b4;">value</span><span>();
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> swap_right = active_bin.price.</span><span style="color:#96b5b4;">mul_u64</span><span>(swap_left - fee);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// If there&#39;s not enough balance (after fees) in this bin to fulfill
+</span><span>        </span><span style="color:#65737e;">// swap, adjust swap amounts to maximum, and update fees accordingly.
+</span><span>        </span><span style="color:#b48ead;">let</span><span> bin_balance_right = active_bin.</span><span style="color:#96b5b4;">balance_right</span><span>();
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(swap_right &gt; bin_balance_right) {
+</span><span>            swap_right = bin_balance_right;
+</span><span>            swap_left = active_bin.price.</span><span style="color:#96b5b4;">div_u64</span><span>(bin_balance_right);
+</span><span>            </span><span style="color:#65737e;">// !NEW!
+</span><span>            </span><span style="color:#65737e;">// Fee is updated to match the new `swap_left` amount. Since the 
+</span><span>            </span><span style="color:#65737e;">// output amount of `R` is set already set, we have to apply the 
+</span><span>            </span><span style="color:#65737e;">// fee additively to the input amount, instead of using subtraction. 
+</span><span>            fee = </span><span style="color:#96b5b4;">get_fee_inv</span><span>(swap_left, fee_bps);
+</span><span>            swap_left = swap_left + fee;
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Execute swap
+</span><span>        active_bin.balance_left.</span><span style="color:#96b5b4;">join</span><span>(coin_left.</span><span style="color:#96b5b4;">split</span><span>(swap_left, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>());
+</span><span>        result_coin.</span><span style="color:#96b5b4;">join</span><span>(active_bin.balance_right.</span><span style="color:#96b5b4;">split</span><span>(swap_right).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// !NEW!
+</span><span>        </span><span style="color:#65737e;">// Create instance of our new `FeeLogEntry` type and add it to the fee_log.
+</span><span>        active_bin.fee_log_left.</span><span style="color:#96b5b4;">push_back</span><span>(
+</span><span>            FeeLogEntry {
+</span><span>                amount: fee,
+</span><span>                timestamp_ms: clock.</span><span style="color:#96b5b4;">timestamp_ms</span><span>(),
+</span><span>                total_bin_size_as_r: </span><span style="color:#96b5b4;">amount_as_r</span><span>(active_bin.price, active_bin.provided_left, active_bin.provided_right)
+</span><span>            }
+</span><span>        );
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Cross over one bin right if active bin is empty after swap,
+</span><span>        </span><span style="color:#65737e;">// abort if swap is not complete and no bins are left
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(active_bin.</span><span style="color:#96b5b4;">balance_right</span><span>() == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>            </span><span style="color:#b48ead;">let</span><span> bin_right_id = </span><span style="color:#bf616a;">self</span><span>.active_bin_id + </span><span style="color:#d08770;">1</span><span>;
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(coin_left.</span><span style="color:#96b5b4;">value</span><span>() &gt; </span><span style="color:#d08770;">0</span><span>) {
+</span><span>                assert!(</span><span style="color:#bf616a;">self</span><span>.bins.</span><span style="color:#96b5b4;">contains</span><span>(&amp;bin_right_id), EInsufficientPoolLiquidity);
+</span><span>            };
+</span><span>            </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">set_active_bin</span><span>(bin_right_id);
+</span><span>        };
+</span><span>    };
+</span><span>    coin_left.</span><span style="color:#96b5b4;">destroy_zero</span><span>();
+</span><span>
+</span><span>    result_coin
+</span><span>}
+</span></code></pre>
+<p>Hopefully most of that makes sense. The one thing that probably warrants some deeper explanation is the application of the &quot;inverse fee&quot;. Let's briefly investigate it. (Warning: Math ahead, feel free to skip ahead if you don't care about it). </p>
+<p>Let's look at it from the perspective of a user performing a swap. When you swap from <code>L</code> to <code>R</code>, and it's executed inside just one bin, the fee is incurred by paying out just a little bit less <code>R</code> than the price times your <code>L</code> amount (<code>fee_bps</code> / 100 percent less to be exact). Now, if instead you swap enough <code>L</code> to pay for all the <code>R</code> inside one bin <em>after fees</em>, then the pool should give you all the <code>R</code> from that bin. But that means the amount of <code>R</code> the pool pays out to you (from that bin) is set. Incurring the fee by paying out less <code>R</code> would leave <code>R</code> in the bin, which is not what the pool wants. So the pool has to incur the fee by <em>increasing</em> the amount of <code>L</code> paid for the set amount of <code>R</code>. The question then is: By how much should the pool increase the amount of <code>L</code> paid to give a fee equivalent to the reduction in amount of <code>R</code>?</p>
+<p>Let <code>L</code> be the amount that a user wants to swap, and p is the price inside the trading bin. Then the amount of <code>R</code> is:</p>
+<p>$$ R = p \cdot L \Big(1 - \frac{\texttt{fee\_bps}}{10000}\Big) $$</p>
+<p>Dividing both sides by the &quot;fee factor&quot; and the price, we get the following equivalent equation:</p>
+<p>$$ L = \frac{R}{p\Big(1 - \frac{\texttt{fee\_bps}}{10000}\Big)} =  \frac{R}{p}\Big(1 - \frac{\texttt{fee\_bps}}{10000}\Big)^{-1}$$</p>
+<p>So, the answer is that we have to increase the paid amount of <code>L</code> by a factor of:</p>
+<p>$$ \Big(1 - \frac{\texttt{fee\_bps}}{10000}\Big)^{-1}$$</p>
+<p>This is exactly what is implemented in the code (<code>get_fee</code> and <code>get_fee_inv</code> are shown a bit further below).</p>
+<p>Then finally, a small note on saving <code>self.fee_bps()</code>. We are forced to save the result of this call in a variable at the beginning of the function, instead of just calling the function when we need it. This is because <code>self.get_active_bin_mut</code> mutably borrows <code>self</code>. So the Move compiler won't allow us to immutably borrow self after that call. (Try replacing <code>fee_bps</code> with calls to <code>self.fee_bps()</code> and compiling to see the error for yourself. This behavior is inherited directly from how references work in Rust. You can read more about how the Rust references and the Rust borrow checker work <a rel="noopener" target="_blank" href="https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html">here</a>).</p>
+<p>The code for <code>swap_rtl</code> is changed in an analogous manner, so the code is left out of this article for brevity. It should be doable to implement it yourself, but you can also just copy <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-liquidity-book/blob/702bf2c090ca052da1997d07cedf4ccd309e2c02/sources/liquidity_book.move#L479C1-L528C2">the reference code on GitHub</a> if you prefer.</p>
+<h3 id="3-3-3-some-more-helper-functions">3.3.3 Some More Helper Functions</h3>
+<p>There are four new helper functions that we used above. Let's quickly go over these.</p>
+<p>We have <code>get_fee</code> and <code>get_fee_inv</code> for calculating fee amounts: </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Calculate a fee of `fee_bps` basis points.
+</span><span>public fun </span><span style="color:#96b5b4;">get_fee</span><span>(amount: </span><span style="color:#b48ead;">u64</span><span>, fee_bps: </span><span style="color:#b48ead;">u64</span><span>): </span><span style="color:#b48ead;">u64 </span><span>{
+</span><span>    </span><span style="color:#b48ead;">let</span><span> fee_factor = ufp256::from_fraction(fee_bps as u256, </span><span style="color:#d08770;">ONE_BPS </span><span>as u256);
+</span><span>    fee_factor.</span><span style="color:#96b5b4;">mul_u64</span><span>(amount)
+</span><span>}
+</span><span>
+</span><span style="color:#65737e;">/// Calculate a fee of `fee_bps` basis points, but on the output of a trade: amount/(1-fee) - amount.
+</span><span>public fun </span><span style="color:#96b5b4;">get_fee_inv</span><span>(amount: </span><span style="color:#b48ead;">u64</span><span>, fee_bps: </span><span style="color:#b48ead;">u64</span><span>): </span><span style="color:#b48ead;">u64 </span><span>{
+</span><span>    ufp256::from_fraction((</span><span style="color:#d08770;">ONE_BPS </span><span>- fee_bps) as u256, </span><span style="color:#d08770;">ONE_BPS </span><span>as u256)
+</span><span>    .</span><span style="color:#96b5b4;">div_u64</span><span>(amount)
+</span><span>    - amount
+</span><span>}
+</span></code></pre>
+<p>We have the <code>fee_bps</code> accessor for <code>Pool</code>s:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Public accessor for `pool.fee_bps`.
+</span><span>public fun fee_bps&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;Pool&lt;L, R&gt;): </span><span style="color:#b48ead;">u64 </span><span>{
+</span><span>    </span><span style="color:#b48ead;">return </span><span style="color:#bf616a;">self</span><span>.fee_bps
+</span><span>}
+</span></code></pre>
+<p>And lastly, we have <code>amount_as_r</code>, which transforms an amount of <code>L</code> and <code>R</code> into one equivalent amount of <code>R</code> at a given price. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Calculate the value of two amounts represented as the right given price
+</span><span style="color:#65737e;">/// `price`.
+</span><span>public fun </span><span style="color:#96b5b4;">amount_as_r</span><span>(price: </span><span style="color:#d08770;">UFP256</span><span>, amount_l: </span><span style="color:#b48ead;">u64</span><span>, amount_r: </span><span style="color:#b48ead;">u64</span><span>): </span><span style="color:#b48ead;">u64 </span><span>{
+</span><span>    price.</span><span style="color:#96b5b4;">mul_u64</span><span>(amount_l) + amount_r
+</span><span>}
+</span></code></pre>
+<h2 id="3-4-paying-out-fees">3.4 Paying Out Fees</h2>
+<p>After a providing liquidity for a while in an LB pool, an LP will eventually want to take profits, and withdraw their liquidity and earned fees. So, up next, we will update our code to pay out earned fees when an LP withdraws. We will use fee logs and <code>LiquidityProviderReceipt</code>s to make the calculations.</p>
+<h3 id="3-4-1-updating-the-withdrawal-code">3.4.1 Updating the Withdrawal Code</h3>
+<p>Let's start out by modifying the <code>withdraw_liquidity</code> function we wrote above to pay out fees. </p>
+<p>Fees are paid out one bin at a time, same as the provided liquidity. We show the code for this below. To keep it simple, let's only consider the fees in the <code>fee_log_left</code> of each bin. The code for the <code>fee_log_right</code> will once again be analogous. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>public fun withdraw_liquidity&lt;L, R&gt; (</span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;, receipt: LiquidityProviderReceipt, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>    ... </span><span style="color:#65737e;">// setup code
+</span><span>    </span><span style="color:#b48ead;">while </span><span>(!provided_liquidity.</span><span style="color:#96b5b4;">is_empty</span><span>()) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> receipt_bin_liquidity = provided_liquidity.</span><span style="color:#96b5b4;">pop_back</span><span>();
+</span><span>        </span><span style="color:#b48ead;">let</span><span> bin = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_bin_mut</span><span>(receipt_bin_liquidity.bin_id);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// !NEW! 
+</span><span>        </span><span style="color:#65737e;">// Calculate liquidity deposited in this bin as `R`. Used for
+</span><span>        </span><span style="color:#65737e;">// calculating the share of fees below.
+</span><span>        </span><span style="color:#b48ead;">let</span><span> receipt_bin_liquidity_as_r = </span><span style="color:#96b5b4;">amount_as_r</span><span>(bin.</span><span style="color:#96b5b4;">price</span><span>(), receipt_bin_liquidity.left, receipt_bin_liquidity.right);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// !NEW!
+</span><span>        </span><span style="color:#65737e;">// Calculate earned `left` fees
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> fees_earned_left = </span><span style="color:#d08770;">0</span><span>;
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> i = bin.fee_log_left.</span><span style="color:#96b5b4;">length</span><span>();
+</span><span>        </span><span style="color:#b48ead;">while </span><span>(i &gt; </span><span style="color:#d08770;">0</span><span>){
+</span><span>            </span><span style="color:#b48ead;">let</span><span> fee_log = bin.fee_log_left.</span><span style="color:#96b5b4;">borrow_mut</span><span>(i-</span><span style="color:#d08770;">1</span><span>);
+</span><span>            </span><span style="color:#65737e;">// This prevents fee hijacking. LP&#39;s should not get any fees 
+</span><span>            </span><span style="color:#65737e;">// from swaps that happened before they provided liquidity.
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(fee_log.timestamp_ms &lt; deposit_time_ms) {
+</span><span>                </span><span style="color:#b48ead;">break
+</span><span>            };
+</span><span>            </span><span style="color:#65737e;">// Calculate earned fees proportional to bin share, 
+</span><span>            </span><span style="color:#65737e;">// fee_log.amount * share
+</span><span>            </span><span style="color:#b48ead;">let</span><span> fee = ufp256::from_fraction((fee_log.amount as u256) * (receipt_bin_liquidity_as_r as u256), fee_log.total_bin_size_as_r as u256).</span><span style="color:#96b5b4;">truncate_to_u64</span><span>();
+</span><span>            </span><span style="color:#65737e;">// Add to the total
+</span><span>            fees_earned_left = fees_earned_left + fee;
+</span><span>            </span><span style="color:#65737e;">// Update fee log and delete it if empty
+</span><span>            fee_log.amount = fee_log.amount - fee;
+</span><span>            fee_log.total_bin_size_as_r = fee_log.total_bin_size_as_r - receipt_bin_liquidity_as_r;
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(fee_log.amount == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>                bin.fee_log_left.</span><span style="color:#96b5b4;">remove</span><span>(i - </span><span style="color:#d08770;">1</span><span>);
+</span><span>            };
+</span><span>            </span><span style="color:#65737e;">// We traverse the fee log backwards to avoid deletion complexity
+</span><span>            i = i - </span><span style="color:#d08770;">1</span><span>;
+</span><span>        };
+</span><span>
+</span><span>        ... </span><span style="color:#65737e;">// Analogous code for `right` fees
+</span><span>    };
+</span><span>}
+</span></code></pre>
+<p>One thing that might seem odd at first is this line:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fee_log.total_bin_size_as_r = fee_log.total_bin_size_as_r - receipt_bin_liquidity_as_r;
+</span></code></pre>
+<p>When the <code>total_bin_size_as_r</code> is first initialized, it is exactly that: the total liquidity in that bin in terms of <code>R</code>. It seems to have a function as a record, meaning that it should be immutable, and you would be forgiving for thinking that. The naming doesn't help here, but hopefully it makes more sense if you think of <code>total_bin_size_as_r</code> as &quot;the remaining value (as <code>R</code>) from LP's that still have a claim to this fee&quot;. Then hopefully it makes sense that we have to mutate it, subtracting the <code>receipt_bin_liquidity_as_r</code> when the liquidity from that receipt is withdrawn. (If anything, this shows once again that naming things is hard.)</p>
+<p>You may also wonder why we traverse from the end of the vector (most recent to oldest). The primary advantage of this is that, since <code>FeeLogEntry</code>s are pushed onto the vector in chronological order, we can simply stop (<code>break</code>) once we've reached a <code>FeeLogEntry</code> that is older than the <code>deposit_time_ms</code> on the receipt. (Another small advantage of this is that we don't have to deal with shifting indices. If we move forwards along a vector, and then delete an element, all elements after the deleted element will have their index decreased by one. Then we would have to leave the index unchanged instead of incrementing it by 1. Making this case distinction would make the code a little bit harder to read.)</p>
+<h3 id="3-4-2-updating-bin-state">3.4.2 Updating Bin State</h3>
+<p>There is one final change we need to make to <code>withdraw_liquidity</code>, which is that we need to update the <code>bin.provided_left</code> and <code>bin.provided_right</code> at the very end of the while loop. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>public fun withdraw_liquidity&lt;L, R&gt; (</span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;, receipt: LiquidityProviderReceipt, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>    ... </span><span style="color:#65737e;">// Setup as shown before
+</span><span>    </span><span style="color:#b48ead;">while </span><span>(!provided_liquidity.</span><span style="color:#96b5b4;">is_empty</span><span>()) {
+</span><span>        ... </span><span style="color:#65737e;">// As shown before: payout calculations (fees + provided liquidity)
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// !NEW!
+</span><span>        </span><span style="color:#65737e;">// Update `bin.provided_left` and `bin.provided_right`
+</span><span>        bin.provided_left = bin.provided_left - receipt_bin_liquidity.left;
+</span><span>        bin.provided_right = bin.provided_right - receipt_bin_liquidity.right;
+</span><span>    };
+</span><span>}
+</span></code></pre>
+<p>And that's it! You have now added all required functionality for users to supply and withdraw liquidity, and earn fees in the process.</p>
+<h3 id="3-4-3-full-withdrawal-code">3.4.3 Full Withdrawal Code</h3>
+<p>The full code for <code>withdraw_liquidity</code>, including the fee calculations for the <code>fee_log_right</code> is shown below for reference.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>public fun withdraw_liquidity&lt;L, R&gt; (</span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;, receipt: LiquidityProviderReceipt, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> LiquidityProviderReceipt {id: receipt_id, pool_id: receipt_pool_id, deposit_time_ms, liquidity: </span><span style="color:#b48ead;">mut</span><span> provided_liquidity} = receipt;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Make sure that the receipt was given for liquidity in this pool
+</span><span>    assert!(</span><span style="color:#bf616a;">self</span><span>.id.</span><span style="color:#96b5b4;">to_inner</span><span>() == receipt_pool_id, EInvalidPoolID);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> result_coin_left = coin::zero&lt;L&gt;(ctx);
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> result_coin_right = coin::zero&lt;R&gt;(ctx);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">while </span><span>(!provided_liquidity.</span><span style="color:#96b5b4;">is_empty</span><span>()) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> receipt_bin_liquidity = provided_liquidity.</span><span style="color:#96b5b4;">pop_back</span><span>();
+</span><span>        </span><span style="color:#b48ead;">let</span><span> bin = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_bin_mut</span><span>(receipt_bin_liquidity.bin_id);
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> receipt_bin_liquidity_as_r = </span><span style="color:#96b5b4;">amount_as_r</span><span>(bin.</span><span style="color:#96b5b4;">price</span><span>(), receipt_bin_liquidity.left, receipt_bin_liquidity.right);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Calculate earned `left` fees
+</span><span>        </span><span style="color:#65737e;">// Traverse `fee_log_left` backwards to avoid deletion complexity
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> fees_earned_left = </span><span style="color:#d08770;">0</span><span>;
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> i = bin.fee_log_left.</span><span style="color:#96b5b4;">length</span><span>();
+</span><span>        </span><span style="color:#b48ead;">while </span><span>(i &gt; </span><span style="color:#d08770;">0</span><span>){
+</span><span>            </span><span style="color:#b48ead;">let</span><span> fee_log = bin.fee_log_left.</span><span style="color:#96b5b4;">borrow_mut</span><span>(i-</span><span style="color:#d08770;">1</span><span>);
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(fee_log.timestamp_ms &lt; deposit_time_ms) {
+</span><span>                </span><span style="color:#b48ead;">break
+</span><span>            };
+</span><span>            </span><span style="color:#65737e;">// Calculate earned fees proportional to bin share
+</span><span>            </span><span style="color:#b48ead;">let</span><span> fee = ufp256::from_fraction((fee_log.amount as u256) * (receipt_bin_liquidity_as_r as u256), fee_log.total_bin_size_as_r as u256).</span><span style="color:#96b5b4;">truncate_to_u64</span><span>();
+</span><span>            fees_earned_left = fees_earned_left + fee;
+</span><span>            </span><span style="color:#65737e;">// Update fee log and delete if empty
+</span><span>            fee_log.amount = fee_log.amount - fee;
+</span><span>            fee_log.total_bin_size_as_r = fee_log.total_bin_size_as_r - receipt_bin_liquidity_as_r;
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(fee_log.amount == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>                bin.fee_log_left.</span><span style="color:#96b5b4;">remove</span><span>(i - </span><span style="color:#d08770;">1</span><span>);
+</span><span>            };
+</span><span>            i = i - </span><span style="color:#d08770;">1</span><span>;
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Calculate earned `right` fees
+</span><span>        </span><span style="color:#65737e;">// Traverse `fee_log_right` backwards to avoid deletion complexity
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> fees_earned_right = </span><span style="color:#d08770;">0</span><span>;
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> i = bin.fee_log_right.</span><span style="color:#96b5b4;">length</span><span>();
+</span><span>        </span><span style="color:#b48ead;">while </span><span>(i &gt; </span><span style="color:#d08770;">0</span><span>){
+</span><span>            </span><span style="color:#b48ead;">let</span><span> fee_log = bin.fee_log_right.</span><span style="color:#96b5b4;">borrow_mut</span><span>(i-</span><span style="color:#d08770;">1</span><span>);
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(fee_log.timestamp_ms &lt; deposit_time_ms) {
+</span><span>                </span><span style="color:#b48ead;">break
+</span><span>            };
+</span><span>            </span><span style="color:#65737e;">// Calculate earned fees proportional to bin share
+</span><span>            </span><span style="color:#b48ead;">let</span><span> fee = ufp256::from_fraction((fee_log.amount as u256) * (receipt_bin_liquidity_as_r as u256), fee_log.total_bin_size_as_r as u256).</span><span style="color:#96b5b4;">truncate_to_u64</span><span>();
+</span><span>            fees_earned_right = fees_earned_right + fee;
+</span><span>            </span><span style="color:#65737e;">// Update fee log and delete if empty
+</span><span>            fee_log.amount = fee_log.amount - fee;
+</span><span>            fee_log.total_bin_size_as_r = fee_log.total_bin_size_as_r - receipt_bin_liquidity_as_r;
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(fee_log.amount == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>                bin.fee_log_right.</span><span style="color:#96b5b4;">remove</span><span>(i - </span><span style="color:#d08770;">1</span><span>);
+</span><span>            };
+</span><span>            i = i - </span><span style="color:#d08770;">1</span><span>;
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Withdraw left liquidity
+</span><span>        </span><span style="color:#b48ead;">let</span><span> payout_left_amount = receipt_bin_liquidity.left + fees_earned_left;
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(bin.balance_left.</span><span style="color:#96b5b4;">value</span><span>() &gt;= payout_left_amount) {
+</span><span>            result_coin_left.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_left.</span><span style="color:#96b5b4;">split</span><span>(payout_left_amount).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>        } </span><span style="color:#b48ead;">else </span><span>{
+</span><span>            </span><span style="color:#b48ead;">let</span><span> remainder = payout_left_amount - bin.balance_left.</span><span style="color:#96b5b4;">value</span><span>();
+</span><span>            result_coin_left.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_left.</span><span style="color:#96b5b4;">withdraw_all</span><span>().</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>            </span><span style="color:#b48ead;">let mut</span><span> remainder_as_r = bin.price.</span><span style="color:#96b5b4;">mul_u64</span><span>(remainder);
+</span><span>            </span><span style="color:#65737e;">// Sometimes due to rounding, the bin might contain 1 RIGHT
+</span><span>            </span><span style="color:#65737e;">// &#39;too little&#39;, in which case `remainder_as_r - 1` is returned
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(remainder_as_r == bin.balance_right.</span><span style="color:#96b5b4;">value</span><span>() + </span><span style="color:#d08770;">1</span><span>) {
+</span><span>                remainder_as_r = remainder_as_r - </span><span style="color:#d08770;">1</span><span>;
+</span><span>            };
+</span><span>            result_coin_right.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_right.</span><span style="color:#96b5b4;">split</span><span>(remainder_as_r).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Withdraw right liquidity
+</span><span>        </span><span style="color:#b48ead;">let</span><span> payout_right_amount = receipt_bin_liquidity.right + fees_earned_right;
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(bin.balance_right.</span><span style="color:#96b5b4;">value</span><span>() &gt;= payout_right_amount) {
+</span><span>            result_coin_right.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_right.</span><span style="color:#96b5b4;">split</span><span>(payout_right_amount).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>        } </span><span style="color:#b48ead;">else </span><span>{
+</span><span>            </span><span style="color:#b48ead;">let</span><span> remainder = payout_right_amount - bin.balance_right.</span><span style="color:#96b5b4;">value</span><span>();
+</span><span>            result_coin_right.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_right.</span><span style="color:#96b5b4;">withdraw_all</span><span>().</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>            </span><span style="color:#b48ead;">let mut</span><span> remainder_as_l = bin.price.</span><span style="color:#96b5b4;">div_u64</span><span>(remainder);
+</span><span>            </span><span style="color:#65737e;">// Sometimes due to rounding, the bin might contain 1 LEFT
+</span><span>            </span><span style="color:#65737e;">// &#39;too little&#39;, in which case `remainder_as_l - 1` is returned
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(remainder_as_l == bin.balance_left.</span><span style="color:#96b5b4;">value</span><span>() + </span><span style="color:#d08770;">1</span><span>) {
+</span><span>                remainder_as_l = remainder_as_l - </span><span style="color:#d08770;">1</span><span>;
+</span><span>            };
+</span><span>            result_coin_left.</span><span style="color:#96b5b4;">join</span><span>(bin.balance_left.</span><span style="color:#96b5b4;">split</span><span>(remainder_as_l).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>        };
+</span><span>
+</span><span>        bin.provided_left = bin.provided_left - receipt_bin_liquidity.left;
+</span><span>        bin.provided_right = bin.provided_right - receipt_bin_liquidity.right;
+</span><span>    };
+</span><span>    provided_liquidity.</span><span style="color:#96b5b4;">destroy_empty</span><span>();
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Delete the receipt so liquidity can&#39;t be withdrawn twice
+</span><span>    object::delete(receipt_id);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Return the coins
+</span><span>    (result_coin_left, result_coin_right)
+</span><span>}
+</span></code></pre>
+<h1 id="4-conclusion">4. Conclusion</h1>
+<p>That's all for now! If you completed all the steps from this and the previous article, congratulations, you have built your own working LB DEX smart contract! </p>
+<p>There was a lot of new code introduced here. If your code got a bit jumbled up, it might help to compare it with the <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-liquidity-book/blob/pt-2/sources/liquidity_book.move">branch <code>pt-2</code> of the reference implementation</a>.</p>
+<p>In the next article, we will write an extensive suite of tests that show that the smart contract works exactly as we intended. (Don't worry, it does. The tests have been written, just not the article.)</p>
+<p>If you'd like to continue working on your Move skills, take a look at the challenges listed below. You can implement one of them or all of them. </p>
+<p>And finally, if you came all this way, thank you for reading!</p>
+<h1 id="5-challenges">5. Challenges</h1>
+<p>Here are some challenges to try to add to your DEX smart contract. They are listed in increasing difficulty.</p>
+<ul>
+<li>Someone might try to clog the fee log of a <code>Pool</code> by executing a large number of very small swaps. Try adding a check to the swap functions that some minimum number of tokens is traded. You can also make this a <code>Pool</code> parameter. </li>
+<li>It may happen that a liquidity provider wants to add to their position. Implement a function that lets users add to a liquidity position. This function should take the same arguments as <code>provide_liquidity_uniformly</code>, and a <code>LiquidityProviderReceipt</code> in addition. It should check that the receipt is valid for the specified pool, and if so return a new receipt with the new supply totals. </li>
+<li>Provided liquidity is distributed uniformly over the number of bins. Create some more functions that allow for providing liquidity with a different distribution over the bins. You can think of distributions that are maximal at the active bin, like a Gaussian distribution centered around the active bin. You might also create a function that lets the user pick how many bins they want to go left of the active bin and how many bins they want to go right of the active bin, so that liquidity providers can provide liquidity for only one of the pool coins. </li>
+<li>Try introducing a variable fee that increases when a pool gets more active. Take a look at <a rel="noopener" target="_blank" href="https://docs.lfj.gg/concepts/fees">the LFJ docs about variable fees</a> for inspiration. You can implement the whole variable fee, or a simplified version.</li>
+</ul>
+
+        </section>
+
+        
+
+    </article>
+</main>
+
+
+
+        <footer>
+  <div style="display:flex">
+    
+        <a class="soc" href=https:&#x2F;&#x2F;github.com&#x2F;teunvw14 title=GitHub>
+            <i data-feather=github></i>
+        </a>
+    
+        <a class="soc" href=https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;teun-van-wezel&#x2F; title=LinkedIn>
+            <i data-feather=linkedin></i>
+        </a>
+    
+  </div>
+  <div class="footer-info">
+    2026 © Teun van Wezel | Built with <a href="https://www.getzola.org/">Zola</a> / <a
+      href="https://github.com/XXXMrG/archie-zola">Archie-Zola Theme</a>
+  </div>
+</footer>
+
+
+<script>
+    feather.replace();
+</script>
+
+
+    </div>
+</body>
+
+</html>
