@@ -3,8 +3,6 @@ title = "IOTA Rebased - Writing a Raffle Smart Contract With Move"
 date = 2024-12-23
 +++
 
-![IOTA Raffle Ticket](iota-raffle-ticket.jpg)
-
 In this article, we'll see how you can create a raffle smart contract with Move on [IOTA Rebased](https://blog.iota.org/iota-rebased-fast-forward). This smart contract will let users create raffles, and sell tickets for them. The goal of this article is to teach you about Move smart contracts by guiding you through writing one yourself. There are exercises at the end of this article to challenge you to expand the smart contract in your own way.
 
 The source code for this project can be found [here on GitHub](https://github.com/teunvw14/move-raffle).
@@ -314,3 +312,29 @@ If you've completed the above tutorial, and want to challenge yourself, try to a
 - The raffle creator raked in a large chunk of money with the "administrative fees" on his raffles. He wants to give back to the IOTA community by giving away a part of his earnings to one lucky winner. Try changing the smart contract to allow for this giveaway. Consider that a giveaway is basically a raffle where you can get a ticket for free - but you can't get more than one ticket. One approach would be to add a `maxTickets` to the `Raffle` struct.
 
 Thanks for reading!
+
+
+# Appendix: Using Shared Objects Like `Clock` and `Random`
+
+When using `iota::clock::Clock` and `iota::random::Random`, Move forces us to take these in as a reference in our functions:
+
+```rust
+fun do_something_with_clock_and_random(clock: &Clock, random: &Random) { ... }
+```
+
+Why can't we just hardcode the object's addresses in? Especially given that those objects have known addresses that aren't expected to change (`Clock` and `Random` at `0x6` and `0x8` respectively). Why can't we do something like:
+
+```rust
+fun do_something_with_clock_and_random() {
+    let clock: &Clock   = iota::get_shared_object_ref<Clock>("0x6");
+    let random: &Random = iota::get_shared_object_ref<Random>("0x8"); 
+}
+```
+
+This is the only way to get access to the clock, since there exists only one instance of iota::clock::Clock, and there is no way to create another instance. And the only way to get a reference to that one instance is by passing in its address directly.
+
+If Move allowed you to directly address a shared object of type `MySharedType` in your code at address `0xABCD` (for example), the compiler has no way of knowing whether there actually exists an object of type `MySharedType` at `0xABCD`. So the Move compiler has to trust that you typed in the right address, otherwise your code could never compile. (Technically, the compiler could be made to check the network for the type at `0xABCD`, though this prevents anyone from first publishing their package - and creating the needed object after, which would probably be an annoying restriction).
+
+But then imagine that you typed in the wrong address. Then you would get weird runtime errors about accessing fields of your MySharedType that don't exist. These errors would make no sense to an end user of your smart contract.
+
+By only allowing for these shared objects to passed in by reference, the functions you write will fail immediately when called, simply because the wrong type was passed in. This scenario is strongly preferable from the end users point of view, hence (probably) why it was designed as such. 
