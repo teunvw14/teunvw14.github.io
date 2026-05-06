@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+
+    
+        <title>
+             Move on IOTA Rebased: Building a Decentralized Exchange Smart Contract. Part 1: Liquidity Book Pools
+            
+        </title>
+
+        
+            <meta property="og:title" content="Move on IOTA Rebased: Building a Decentralized Exchange Smart Contract. Part 1: Liquidity Book Pools" />
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+         <link rel="icon" type="image/png" href=&#x2F;icon&#x2F;favicon.png />
+    
+
+    
+
+    
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4SM5P4FCHX"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-4SM5P4FCHX');
+        </script>
+    
+
+    
+    
+        <script src=https://teunvw14.github.io/js/feather.min.js></script>
+    
+
+
+    
+        <link href=https://teunvw14.github.io/css/fonts.css rel="stylesheet" />
+    
+
+    <link rel="stylesheet" type="text/css" media="screen" href=https://teunvw14.github.io/css/main.css />
+
+    
+        <link
+            rel="stylesheet"
+            id="darkModeStyle"
+            type="text/css"
+            href=https://teunvw14.github.io/css/dark.css
+            
+            
+                disabled
+            
+        />
+    
+
+    
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+    
+
+
+    
+
+
+</head>
+
+
+<body>
+    <div class="content">
+        <header>
+    
+    <div class="main" id="main_title">
+        <img src="../../favicon_hires.png" style="max-height: 24px; margin-right: 8px;"/>
+        <a href=https:&#x2F;&#x2F;teunvw14.github.io>Teun van Wezel&#x27;s Tech Blog</a>
+    </div>
+    
+    <nav>
+        
+            <a href=&#x2F;>Blog</a>
+        
+            <a href=&#x2F;posts>All posts</a>
+        
+
+        
+            |
+
+            
+                <a href=&#x2F;>en</a>
+            
+        
+
+        
+            | <a id="dark-mode-toggle" onclick="toggleTheme()" href=""></a>
+            <script src=https://teunvw14.github.io/js/themetoggle.js></script>
+        
+    </nav>
+</header>
+
+
+        
+    
+<main>
+    <article>
+        <div class="title">
+            <h1 class="title">Move on IOTA Rebased: Building a Decentralized Exchange Smart Contract. Part 1: Liquidity Book Pools</h1>
+            <div class="meta">
+                
+                on  2025-04-02
+
+                
+            </div>
+        </div>
+
+        
+
+        <section class="body">
+            <h1 id="1-introduction">1. Introduction</h1>
+<p><em>Exchanges</em> are the cornerstone of any financial ecosystem, enabling capital to flow between different assets. In the world of crypto, centralized exchanges (CEXs) are the most familiar. You can buy and sell cryptocurrencies there, the centralized exchange matching up buyers and sellers in exchange for a fee.</p>
+<p>Decentralized exchanges (DEXs) offer the same core functionality, but operate without any centralized third party. Instead, they are exchanges that run as smart contracts on top of a decentralized ledger, making them more censorship resistant, transparent and resilient than traditional centralized exchanges. In that sense, DEXs are quintessential decentralized finance: They let people sell and buy assets directly, at any time, with anyone, without any censorship or interference. The only rules for trading on a DEX, are the rules ones defined in the logic of their smart contracts.</p>
+<p>If you've ever wondered what exactly that logic is, and how it is implemented, you're in luck. This article is the first in a three-part series on building a decentralized exchange with Move on the IOTA Rebased network. We'll develop a feature-rich Move smart contract based on the <strong>Liquidity Book</strong> (LB) model, originally designed by <a rel="noopener" target="_blank" href="https://lfj.gg/">LFJ</a>. By the end of this series, you will have built your very own decentralized exchange and walk away with a deep understanding of how DEXs work. </p>
+<h2 id="1-1-article-series">1.1 Article Series</h2>
+<p>Though there are many beginner tutorials for Move, intermediate tutorials can be harder to find. Having familiarized themselves with the basics, developers often wonder: How do I actually build something with this? The scarcity of intermediate tutorials is unfortunate, because they can really help bridge the gap between basic understanding and practical application. This article series is an attempt to fill that gap. It tries to do this by walking through an example of building a relatively complex Move application: a decentralized exchange. The building of this smart contract is split up into three parts:</p>
+<ol>
+<li>
+<p>The first part (this one) walks through the first steps of writing a Move smart contract implementing the LB DEX model.</p>
+</li>
+<li>
+<p>The <a href="../iota-move-dex-pt2/">second part</a> describes how the DEX smart contract can be expanded to include fees and Liquidity Providers. </p>
+</li>
+<li>
+<p>The <a href="../iota-move-dex-pt3/">third part</a> dives into <em>testing</em> Move smart contracts, which is crucial in gaining confidence that your Move does what it's supposed to do. </p>
+</li>
+</ol>
+<h2 id="1-2-prerequisites">1.2 Prerequisites</h2>
+<p>This is an intermediate tutorial aimed at developers wanting to get a deeper understanding of Move. You are expected to have some working familiarity with the basics of the Move language (things like shared/owned objects, struct abilities, how to publish modules). If you have never programmed with Move before, try working through <a href="../iota-rebased-sc/">this article</a> and <a href="../iota-move-raffle-tutorial/">this article</a> first. These should give you enough understanding to follow along here.</p>
+<p>If at any point you get stuck, you can always refer back to the reference implementation, which you can find under the <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-liquidity-book/tree/pt-1"><code>pt-1</code> branch of the accompanying GitHub repository</a>.</p>
+<h2 id="1-3-acknowledgements">1.3 Acknowledgements</h2>
+<p><em>Many thanks to <a rel="noopener" target="_blank" href="https://iotalabs.io/">iotalabs</a> for supporting this article series with a grant.</em></p>
+<h1 id="2-how-decentralized-exchanges-work">2. How Decentralized Exchanges Work</h1>
+<p>Since we will be building a decentralized exchange, it is probably be useful to know how they work. This subsection will give a brief description of how DEXs generally work. If you are already familiar, feel free to skip to the next subsection (2.1). If you want to get straight into the code, feel free to skip directly to chapter (3) and refer back to this section as needed.</p>
+<p>By a <strong>decentralized exchange</strong>, or <strong>DEX</strong> for short, we mean a collection of trading pools, where each pool lets users swap between a different token pair. So, when we say we want to know &quot;how a DEX works&quot;, what we really want to know is how its trading pools work. So that's what we will describe here.</p>
+<p>Let's take as an example a pool with the token pair <code>ETH/BTC</code>. Then this <code>ETH/BTC</code> trading pool generally works like this:</p>
+<ul>
+<li><strong>Liquidity Providers (LP)</strong>: Some users make their <code>BTC</code> and <code>ETH</code> available to be swapped against. The tokens they provide are collected (pooled) in a <em>liquidity pool</em>. These users are not really interested in swapping between the tokens. They simply provide this liquidity to earn fees from swaps inside the pool. Users that provide trading liquidity in this way are referred to as <em>liquidity providers</em> (sometimes shortened to LP).</li>
+<li><strong>Trade at Any Time without Counterparty</strong>: Traders can swap <code>BTC</code> for <code>ETH</code>, or <code>ETH</code> for <code>BTC</code> at any time at the current pool price. These swaps do not require anyone on the other side buying the token the user is offering, or offering the token the user wants to buy.</li>
+<li><strong>Swaps Adjust the Pool Price</strong>: Swapping for <code>BTC</code> makes <code>BTC</code> more expensive (in terms of <code>ETH</code>), and swapping for <code>ETH</code> makes <code>ETH</code> more expensive (in terms of <code>BTC</code>). This makes sure that the market is efficient. Capitalizing on an arbitrage opportunity - i.e., buying cheap on the DEX and selling for a higher price elsewhere - immediately resolves the price difference, because buying drives the price up. How much the price of a pair changes due to a swap is referred to as the <em>price slippage</em>. </li>
+<li><strong>Impermanent Loss</strong>: When a Liquidity Provider withdraws their liquidity, they may not get back exactly what they provided. If someone provides <code>10 ETH</code> and <code>0.5 BTC</code>, and the <code>BTC</code> price surges (relative to <code>ETH</code>), then some - or in the most extreme scenario, all -  of the <code>0.5 BTC</code> will have been swapped for <code>ETH</code>. When the Liquidity Provider withdraws, they get back much less than the <code>0.5 BTC</code> that they provided. Instead they get back an <code>ETH</code> amount &quot;equivalent&quot; to the <code>BTC</code> they didn't get back (in addition to the <code>10 ETH</code> deposited). The USD value of the withdrawn <code>ETH</code> and <code>BTC</code> might be lower than the USD value of the deposited amounts. This loss can be prevented by waiting until the <code>ETH/BTC</code> price returns to the price level at which the liquidity was provided (hence why it's called <em>impermanent loss</em>).</li>
+</ul>
+<p>There are quite a few different models for DEXs. Some are relatively simple, like the traditional constant-product model. We will be building our DEX on a different, more complex model: the Liquidity Book model.</p>
+<h2 id="2-1-liquidity-book-model">2.1 Liquidity Book Model</h2>
+<p>The definition given in the previous subsection is still quite abstract; there are not a lot of details, because they are very much dependent on what DEX model you are talking about. In this article series, we will be implementing the <em>Liquidity Book</em> (LB) model, used among others by <a rel="noopener" target="_blank" href="https://lfj.gg/">LFJ</a> on Avalanche, and <a rel="noopener" target="_blank" href="https://magicsea.finance/home">MagicSea</a> on the IOTA EVM. This subsection contains a detailed description of how the LB model works. (Though an interesting topic, <em>why</em> this is a good design is outside the scope of this article.)</p>
+<p>You may wonder why we would want to implement the LB model in particular. The biggest reason is that it has some interesting complexities and nuances that make it a good challenge to implement. But LB pools also have some desirable features, the most important of which are the more efficient use of liquidity (through <strong>concentrated liquidity</strong>), and <strong>zero-slippage</strong> swaps. We will explain these in a bit. </p>
+<p>After highlighting these features, we will focus on how swaps are executed in an LB pool. This should make it easier to follow along with the implementation of swaps later in this article.</p>
+<p>But first a little bit of information about providing liquidity in Liquidity Book pools. In the traditional constant product DEX model, provided liquidity is &quot;distributed&quot; across all possible prices (i.e., from 0 to infinity). In contrast, in the Liquidity Book model (LB) liquidity providers choose a price range within which they want to provide liquidity. This liquidity is then divided into discrete price bins. Liquidity providers only earn fees from trades that occur at prices (in bins) where they provide liquidity. This use of <strong>concentrated liquidity</strong> leads to a much more efficient use of provided liquidity. This model works especially well for pairs of tokens where the price is relatively stable, like between two different stablecoins that represent the same fiat currency (for example, the trading pair <code>USDC/USDT</code>). </p>
+<p>So what exactly are these <em>bins</em> that LB pools are made up of? In an LB pool, each bin represents a discrete price point at which swaps can occur. Every LB pool has one <strong>active bin</strong>, inside which the pool always starts executing swaps. In that sense, the active bin price represents the pool price. The pool always tries to execute a swap inside as few bins as possible. In cases where the swap is small enough, it can be executed completely in the active bin, so that the swap causes no price change. This is called a <strong>zero-slippage</strong> swap, and it is one of the unique features of LB pools.</p>
+<h3 id="2-1-1-lb-pool-swaps-examples">2.1.1 LB Pool Swaps Examples</h3>
+<p>Let's look at two examples of swaps in an imaginary <code>ETH/BTC</code> LB pool. Let's assume that the pool already has some liquidity in it, and the starting state of the pool is as shown in the image below. </p>
+<p><img src="https://teunvw14.github.io/posts/iota-move-dex-pt1/LB-graphic-starting-state.png" alt="LB Graphic Pool Starting State" /></p>
+<p>We can see five bins of this pool (but there may be more). Bin <code>15</code> is the <strong>active bin</strong>, and it has a trading price of <code>0.20 ETH/BTC</code>. That means that any swaps, if they are small enough, will be filled at that price. </p>
+<p>There are a few things to note here:</p>
+<ul>
+<li>Only the active bin holds both <code>BTC</code> and <code>ETH</code>. We don't allow liquidity providers to add <code>BTC</code> to the right of the active bin, or <code>ETH</code> to the left of the active bin. This is because depositing liquidity in that way is basically putting up your liquidity below market price. Swaps only ever add tokens in the active bin.</li>
+<li>The price difference between each bin is <code>0.01</code> for simplicity and legibility; in practice, the price change between bins is not constant, but given as a percentage.</li>
+<li>Similar to the previous point: For legibility, the bin IDs here are quite low. In practice, they are much higher to accommodate a large number of different price points.</li>
+</ul>
+<h4 id="2-1-1-1-lb-pool-single-bin-swap-example">2.1.1.1 LB Pool Single Bin Swap Example</h4>
+<p>As mentioned above, one of the largest advantages of the LB model is that it allows zero-slippage swaps, that is, swaps that don't change the price. Let's see that:</p>
+<p><img src="https://teunvw14.github.io/posts/iota-move-dex-pt1/LB-graphic-single-bin-swap.png" alt="LB Graphic Pool Single Bin Swap" /></p>
+<p>This swap is quite simple. Because the active bin has enough <code>ETH</code>, the swap executes inside the active bin, giving <code>2 BTC / 0.2 = 10 ETH</code>. Only the balance of the active bin is changed; no other state changes occur. </p>
+<h4 id="2-1-1-2-lb-pool-multiple-bin-swap-example">2.1.1.2 LB Pool Multiple Bin Swap Example</h4>
+<p>Only when you perform a swap of large enough magnitude, the price of the pair changes. The image below shows an example (executed from the same starting state):</p>
+<p><img src="https://teunvw14.github.io/posts/iota-move-dex-pt1/LB-graphic-multi-bin-swap.png" alt="LB Graphic Pool Multiple Bin Swap" /></p>
+<p>This swap is a bit more complicated, so let's go over it in a little more detail. </p>
+<p>First, the swap trades <code>3 BTC</code> for <code>15 ETH</code> in the active bin <code>15</code>. The <code>ETH</code> in bin <code>15</code> is then depleted, but the trader still has <code>1 BTC</code> they want to swap. The swap <strong>crosses over</strong> to bin <code>16</code>, which becomes the active bin. There the pool fulfills the rest of the order at the new active bin price of <code>0.21 ETH/BTC</code>, resulting in <code>1 BTC / 0.21 ≈ 4.8 ETH</code>, making for a total swap of <code>4 BTC</code> for <code>19.8 ETH</code>. </p>
+<p>If bin <code>16</code> didn't contain the <code>4.8 ETH</code> required to complete the swap, the swap would have kept crossing over to bins on the right until the swap was complete. Note that if there was a very large amount of bins to the right, each holding a very small amount of <code>ETH</code>, the swap would cross over so many times (moving the active bin further and further right) that the swap would create a massive price increase. Alternatively, if there had been no more bins after bin <code>15</code>, and thus no more <code>ETH</code> to swap against, the swap would have aborted. Without the required <code>ETH</code>, the swap can't be fully completed, so the swap aborts. </p>
+<p>And that's how LB pool swaps work! If you would like to dive deeper into the technical details of the Liquidity Book model, take a look at the <a rel="noopener" target="_blank" href="https://docs.lfj.gg/">LFJ docs</a>.</p>
+<h1 id="3-let-s-get-move-ing-writing-the-smart-contract">3. Let's Get Move-ing: Writing the Smart Contract</h1>
+<p>Now that we have discussed all the theory about DEXs, the time has come to actually build the LB DEX model in Move.</p>
+<h2 id="3-1-required-tools">3.1 Required Tools</h2>
+<p>To write, test, and deploy Move smart contracts, you will need:</p>
+<ul>
+<li>The <a rel="noopener" target="_blank" href="https://github.com/iotaledger/iota">IOTA CLI</a> - compiling from source takes quite a while, so consider installing one of <a rel="noopener" target="_blank" href="https://docs.iota.org/developer/getting-started/install-iota#install-from-binaries">the pre-built binaries</a>.</li>
+<li>Strongly recommended: Using Visual Studio Code with the <a rel="noopener" target="_blank" href="https://marketplace.visualstudio.com/items?itemName=iotaledger.iota-move">IOTA Move extension</a>.</li>
+</ul>
+<p>Make sure you have these installed before continuing.</p>
+<h2 id="3-2-setup">3.2 Setup</h2>
+<p>To set up our project, create a new Move project <code>liquidity_book</code> using the IOTA CLI:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota move new liquidity_book
+</span><span style="color:#bf616a;">$</span><span> cd liquidity_book
+</span></code></pre>
+<p>There is only one other thing you will need: In this project, we will use a custom number type <code>UFP256</code> (Unsigned Fixed Point, 256-bit) for representing fractional token exchange rates. Make sure to download <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-fixed-point/blob/main/sources/ufp256.move"><code>ufp256.move</code></a> and place the file into the <code>sources</code> directory. (If you're interested, the motivation for using a custom number type is given in the Appendix at the end of this article.)</p>
+<h2 id="3-3-defining-the-liquidity-book-protocol-pool-and-poolbin-types">3.3 Defining the Liquidity Book Protocol: <code>Pool</code> and <code>PoolBin</code> Types</h2>
+<p>Open up the <code>liquidity_book</code> folder in your preferred code editor. In this section, we will define the  <code>Pool</code> and <code>PoolBin</code> types. A <code>Pool</code> object will represent one LB pool, and will maintain the state of that pool as a <a rel="noopener" target="_blank" href="https://docs.iota.org/developer/iota-101/objects/object-ownership/shared">shared object</a>. The <code>Pool</code> type will hold a collection of <code>PoolBin</code> objects, representing all the distinct price bins. </p>
+<h3 id="3-3-1-poolbin">3.3.1 <code>PoolBin</code></h3>
+<p>Let's start off with the fundamental building block of our LB model, the <code>PoolBin</code>. </p>
+<h4 id="3-3-1-1-poolbin-struct-definition">3.3.1.1 <code>PoolBin</code> Struct Definition</h4>
+<p>Inside a bin, swaps can take place at a constant price. So, the <code>PoolBin</code> needs a <code>price</code> field, at which trades inside that bin occur, and there are the balances: <code>balance_left</code> containing <code>L</code> and <code>balance_right</code> containing <code>R</code>. These balances hold the liquidity that is provided, and they are what traders can swap against. Though we will not integrate swap fees yet in this article, these balances will also store generated fees directly. </p>
+<p>Let's write our first lines of code. Inside <code>sources/liquidity_book.move</code>, we first import some dependencies, and define some constants. Do not worry about these for now,  we will need them later. </p>
+<p>Then underneath we define the <code>PoolBin</code> type:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move
+</span><span>module liquidity_book::liquidity_book {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::balance::{</span><span style="color:#b48ead;">Self</span><span>, Balance};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>liquidity_book::ufp256::{</span><span style="color:#b48ead;">Self</span><span>, </span><span style="color:#d08770;">UFP256</span><span>};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::vec_map::{</span><span style="color:#b48ead;">Self</span><span>, VecMap};
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">MID_U64</span><span>: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">9223372036854775808</span><span>; </span><span style="color:#65737e;">// 2^64 / 2
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">ONE_BPS</span><span>: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">10000</span><span>;
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>PoolBin&lt;phantom L, phantom R&gt; has store {
+</span><span>        </span><span style="color:#bf616a;">price</span><span>: UFP256, </span><span style="color:#65737e;">// The trading price inside this bin
+</span><span>        </span><span style="color:#bf616a;">balance_left</span><span>: Balance&lt;L&gt;,
+</span><span>        </span><span style="color:#bf616a;">balance_right</span><span>: Balance&lt;R&gt;,
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>You might be unfamiliar with the notation <code>&lt;L, R&gt;</code> in the <code>PoolBin</code> definition. Adding this notation makes <code>PoolBin</code> <em>generic</em> over the token types <code>L</code> and <code>R</code>. (In Move, each token is represented by a unique type <code>T</code>. The IOTA token is represented by the <code>iota::iota::IOTA</code> type, for example.) Without <em>generics</em>, we would have to re-publish our smart contract for every new token pair that we want to create a pool for. The beauty of generics is that we can implement our types and functions for all different possible token pairs <code>L</code> and <code>R</code> in one go.</p>
+<p>The <code>phantom</code> keyword in <code>&lt;phantom L, phantom R&gt;</code> comes simply from the fact that the <code>Balance</code> type is defined as <code>Balance&lt;phantom T&gt;</code>. In essence, the <code>phantom</code> keyword indicates that there isn't actually any object of type <code>T</code> stored inside a <code>Balance&lt;T&gt;</code>; the phantom type parameter just lets the Move type system differentiate between two different token balances <code>Balance&lt;A&gt;</code> and <code>Balance&lt;B&gt;</code>.</p>
+<p>If you don't fully understand generics yet, don't worry. For this project, it suffices to understand that by using the <code>&lt;L, R&gt;</code> notation, we are defining a type or function for an arbitrary token pair <code>L</code>, <code>R</code>. If you want to get a deeper understanding of generics, check out <a rel="noopener" target="_blank" href="https://move-book.com/move-basics/generics.html">The Move Book section on generics</a>.</p>
+<p>The other notable concept unique to Move in the code above is the use of the <a rel="noopener" target="_blank" href="https://docs.iota.org/developer/iota-101/move-overview/structs-and-abilities/store"><code>store</code> ability</a>. This ability makes it possible to store the <code>PoolBin</code> type inside a <code>Pool</code>. Unlike the <code>Pool</code> type that we will define, we purposely don't give <code>PoolBin</code> the <a rel="noopener" target="_blank" href="https://docs.iota.org/developer/iota-101/move-overview/structs-and-abilities/key"><code>key</code> ability</a>. That's because, unlike the <code>Pool</code> type, we never want it to exist as a stand-alone object. It will always exist as part of a <code>Pool</code>. </p>
+<h4 id="3-3-1-2-poolbin-convenience-functions">3.3.1.2 <code>PoolBin</code> Convenience Functions</h4>
+<p>To make our life a bit easier, we will create a few convenience functions for the <code>PoolBin</code> type. Underneath the <code>PoolBin</code> struct, let's add these functions:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module liquidity_book::liquidity_book {
+</span><span>    [...]
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>PoolBin&lt;phantom L, phantom R&gt; has store {...}
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Public accessor for `bin.price`.
+</span><span>    public fun price&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;PoolBin&lt;L, R&gt;): </span><span style="color:#d08770;">UFP256 </span><span>{
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.price
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Returns the left balance of a bin.
+</span><span>    public fun balance_left&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;PoolBin&lt;L, R&gt;): </span><span style="color:#b48ead;">u64 </span><span>{
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.balance_left.</span><span style="color:#96b5b4;">value</span><span>()
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Returns the right balance of a bin.
+</span><span>    public fun balance_right&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;PoolBin&lt;L, R&gt;): </span><span style="color:#b48ead;">u64 </span><span>{
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.balance_right.</span><span style="color:#96b5b4;">value</span><span>()
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<h3 id="3-3-2-pool">3.3.2 <code>Pool</code></h3>
+<p>Up next, we will define the <code>Pool</code> type and the logic for creating them. We will also see how the <code>PoolBin</code> type integrates into it.</p>
+<h4 id="3-3-2-1-pool-struct-definition">3.3.2.1  <code>Pool</code> Struct Definition</h4>
+<p>We define the <code>Pool&lt;L, R&gt;</code> struct, again generic over the token types <code>L</code> and <code>R</code>, as follows:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move
+</span><span>module liquidity_book::liquidity_book {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::balance::{</span><span style="color:#b48ead;">Self</span><span>, Balance};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>liquidity_book::ufp256::{</span><span style="color:#b48ead;">Self</span><span>, </span><span style="color:#d08770;">UFP256</span><span>};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::vec_map::{</span><span style="color:#b48ead;">Self</span><span>, VecMap};
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">MID_U64</span><span>: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">9223372036854775808</span><span>; </span><span style="color:#65737e;">// 2^64 / 2
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">ONE_BPS</span><span>: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">10000</span><span>;
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>PoolBin&lt;phantom L, phantom R&gt; has store {...}
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>Pool&lt;phantom L, phantom R&gt; has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">bins</span><span>: VecMap&lt;</span><span style="color:#b48ead;">u64</span><span>, PoolBin&lt;L, R&gt;&gt;, </span><span style="color:#65737e;">// bins are identified with a unique id
+</span><span>        </span><span style="color:#bf616a;">active_bin_id</span><span>: </span><span style="color:#b48ead;">u64</span><span>, </span><span style="color:#65737e;">// id of the active bin
+</span><span>        </span><span style="color:#bf616a;">bin_step_bps</span><span>: </span><span style="color:#b48ead;">u64</span><span>, </span><span style="color:#65737e;">// The step/delta between bins in basis points (0.0001)
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Let's go over the <code>Pool</code> fields. The first field is a unique object id <code>UID</code>, as is required by the <a rel="noopener" target="_blank" href="https://docs.iota.org/developer/iota-101/move-overview/structs-and-abilities/key"><code>key</code> ability</a>. We will store the bins of a <code>Pool</code> inside a <code>VecMap</code>, so that we can store and identify bins by a <code>u64</code> id (there are other ways, but this is perhaps the simplest). Additionally, we need to save the <code>active_bin_id</code>, so we know in which bins swaps should start executing. Finally, <code>bin_step_bps</code> is a configuration parameter chosen by the pool creator that determines what the price difference is between adjacent bins. This is typically chosen in direct proportion to the expected price volatility of the traded pair. (So a low bin step for a low volatility pair, and a high bin step for a high volatility pair. Can you think of why?) </p>
+<h4 id="3-3-2-2-pool-initialization">3.3.2.2  <code>Pool</code> Initialization</h4>
+<p>Now that we have defined the <code>Pool</code> type, let's define an initialization function <code>new</code> for <code>Pool</code>. The whole thing is quite long, so we will break it down into parts.</p>
+<p>Inside the <code>liquidity_book</code> module, start out by defining a function <code>new</code>:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move
+</span><span>entry fun new&lt;L, R&gt;(
+</span><span>    bin_step_bps: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    starting_price_mantissa: u256,
+</span><span>    </span><span style="color:#b48ead;">mut</span><span> starting_liquidity_left: Coin&lt;L&gt;,
+</span><span>    </span><span style="color:#b48ead;">mut</span><span> starting_liquidity_right: Coin&lt;R&gt;,
+</span><span>    bin_count: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext
+</span><span>) {
+</span><span>    </span><span style="color:#65737e;">// An odd number of bins is required, so that, including the active
+</span><span>    </span><span style="color:#65737e;">// bin, there is liquidity added to an equal amount of bins to the left
+</span><span>    </span><span style="color:#65737e;">// and right of the active bin
+</span><span>    assert!(bin_count % </span><span style="color:#d08770;">2 </span><span>== </span><span style="color:#d08770;">1</span><span>, EEvenBincount);
+</span><span>}
+</span></code></pre>
+<p>Let's begin with the function signature. The <code>new</code> function takes five arguments (not counting the <code>TxContext</code>). Let's go over them. </p>
+<p>The first two arguments directly correspond to configuration parameters for the <code>Pool</code> type. The <code>bin_step_bps</code> is used directly; the <code>starting_price_mantissa</code> gives the starting price as a mantissa (which, for the <code>UFP</code> type, is the starting price multiplied by <code>10^18</code>).</p>
+<p>The other three arguments have to do with starting liquidity. We require from the caller <code>L</code> and <code>R</code> <code>Coin</code>s as starting liquidity. The <code>bin_count</code> parameter lets the caller specify across how many bins in total they would like to distribute the liquidity, i.e., how concentrated they would like the tokens to be inside the pool. (For now, we will keep things relatively simple and only allow adding liquidity to pools as they are created. Obviously, to speak of a proper DEX, we would need to create functions for liquidity providers to add and remove liquidity from a pool at any time. We will add this functionality in the next article.)</p>
+<p>To simplify some calculations later on, we require <code>bin_count</code> to be odd, which we enforce with the <code>assert</code>. <code>EEvenBincount</code> is a custom error, which we need to define. At the top of your module (underneath the <code>const</code> definitions), add the error like this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module liquidity_book::liquidity_book {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>[...];
+</span><span>    </span><span style="color:#b48ead;">const </span><span>[...];
+</span><span>
+</span><span>    #[</span><span style="color:#bf616a;">error</span><span>]
+</span><span>    </span><span style="color:#b48ead;">const</span><span> EEvenBincount: vector&lt;</span><span style="color:#b48ead;">u8</span><span>&gt; =
+</span><span>        </span><span style="color:#b48ead;">b</span><span>&quot;</span><span style="color:#a3be8c;">Illegal bin count. Bin count is even but should be odd.</span><span>&quot;;
+</span><span>
+</span><span>    [...]
+</span><span>}
+</span></code></pre>
+<p>Next, let's go further into the function body. The biggest part of the <code>new</code> function will be to distribute the <code>starting_liquidity_left</code> and <code>starting_liquidity_right</code> across the <code>bin_count</code> bins. We start out by initializing some variables and then begin creating the left bins:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move
+</span><span>entry fun new&lt;L, R&gt;(...) {
+</span><span>    [...]
+</span><span>    </span><span style="color:#65737e;">// Start the first bin with ID in the middle of the u64 range, so as the
+</span><span>    </span><span style="color:#65737e;">// number of bins increase, the ID&#39;s don&#39;t over- or underflow
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_active_bin_id = </span><span style="color:#d08770;">MID_U64</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_price = ufp256::new(starting_price_mantissa);
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> bins = vec_map::empty();
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// the amount of bins left and right of the active bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bins_each_side = (bin_count - </span><span style="color:#d08770;">1</span><span>) / </span><span style="color:#d08770;">2</span><span>; 
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left_per_bin = starting_liquidity_left.</span><span style="color:#96b5b4;">value</span><span>() / (bins_each_side + </span><span style="color:#d08770;">1</span><span>);
+</span><span>    
+</span><span>    </span><span style="color:#65737e;">// (10000 + bin_step_bps)/10000 =  1 + 0.0001 * bin_step_bps
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_step_price_factor = ufp256::from_fraction(
+</span><span>        (</span><span style="color:#d08770;">ONE_BPS </span><span>+ bin_step_bps) as u256, 
+</span><span>        </span><span style="color:#d08770;">ONE_BPS </span><span>as u256
+</span><span>    );
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> new_bin_price = starting_price.</span><span style="color:#96b5b4;">div</span><span>(bin_step_price_factor);
+</span><span>    </span><span style="color:#d08770;">1</span><span style="color:#b48ead;">u64</span><span>.range_do_eq!(bins_each_side, |</span><span style="color:#bf616a;">n</span><span>| {
+</span><span>        </span><span style="color:#65737e;">// Initialize new bin
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin_id = starting_active_bin_id - n;
+</span><span>        </span><span style="color:#b48ead;">let</span><span> balance_for_bin = starting_liquidity_left.</span><span style="color:#96b5b4;">split</span><span>(coin_left_per_bin, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>();
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin = PoolBin {
+</span><span>            price: new_bin_price,
+</span><span>            balance_left: balance_for_bin,
+</span><span>            balance_right: balance::zero(),
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Add bin
+</span><span>        bins.</span><span style="color:#96b5b4;">insert</span><span>(new_bin_id, new_bin);
+</span><span>        new_bin_price = new_bin_price.</span><span style="color:#96b5b4;">div</span><span>(bin_step_price_factor);
+</span><span>    });
+</span><span>}
+</span></code></pre>
+<p>In summary, the code takes these steps:</p>
+<ul>
+<li>Calculate <code>bins_each_side</code>: how many bins will be on the left and right of the starting active bin? Note that <code>bin_count</code> is the total number of bins, so it includes the starting active bin. Hence the <code>-1</code>.</li>
+<li>Calculate <code>coin_left_per_bin</code>: how much <code>L</code> should be in each bin? The <code>L</code> will be distributed among the starting active bin, and the bins to the left of it.</li>
+<li>Create <code>bins_each_side</code> instances of <code>PoolBin</code>, reducing the <code>new_bin_id</code> by one on each step, splitting off <code>coin_left_per_bin</code> for each one. The price for every next bin is reduced by a factor of <code>bin_step_price_factor</code>. </li>
+</ul>
+<p>Here the snippet <code>1.u64.range_do_eq!(N, |n| {f(n)} )</code> is a Move macro equivalent to <code>for n in range(N): f(n)</code> from Python, and similar expressions many other programming languages. </p>
+<p>As you may have guessed, we will do almost exactly the same for the bins to the right of the starting active bin:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move
+</span><span>entry fun new&lt;L, R&gt;(...) {
+</span><span>    [...]
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Add right bins, very similar to above
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right_per_bin = starting_liquidity_right.</span><span style="color:#96b5b4;">value</span><span>() / (bins_each_side + </span><span style="color:#d08770;">1</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> new_bin_price = starting_price.</span><span style="color:#96b5b4;">mul</span><span>(bin_step_price_factor);
+</span><span>    </span><span style="color:#d08770;">1</span><span style="color:#b48ead;">u64</span><span>.range_do_eq!(bins_each_side, |</span><span style="color:#bf616a;">n</span><span>| {
+</span><span>        </span><span style="color:#65737e;">// Initialize new bin
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin_id = starting_active_bin_id + n;
+</span><span>        </span><span style="color:#b48ead;">let</span><span> balance_for_bin = starting_liquidity_right.</span><span style="color:#96b5b4;">split</span><span>(coin_right_per_bin, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>();
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin = PoolBin {
+</span><span>            price: new_bin_price,
+</span><span>            balance_left: balance::zero(),
+</span><span>            balance_right: balance_for_bin,
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Add bin
+</span><span>        bins.</span><span style="color:#96b5b4;">insert</span><span>(new_bin_id, new_bin);
+</span><span>        new_bin_price = new_bin_price.</span><span style="color:#96b5b4;">mul</span><span>(bin_step_price_factor);
+</span><span>    });
+</span><span>}
+</span></code></pre>
+<p>The only major difference here is that on each step, instead of dividing, we multiply by <code>bin_step_price_factor</code>, since the price needs to increase instead of decrease.</p>
+<p>Then the final step in creating the pool is adding the <code>starting_active_bin</code>. We use the remaining amounts in the <code>starting_liquidity_left</code> and <code>starting_liquidity_right</code> coins by directly converting them into balances. (Due to rounding errors, if we split off <code>coin_left_per_bin</code> and <code>coin_right_per_bin</code> from the <code>starting_liquidity</code> coins as we did for the other bins, some tokens may remain in those coins. We would then need to decide what we wanted to do with the coins, since they don't have the <code>drop</code> ability). </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move
+</span><span>entry fun new&lt;L, R&gt;(...) {
+</span><span>    [...]
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Add starting bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_active_bin = PoolBin {
+</span><span>        price: starting_price,
+</span><span>        balance_left: starting_liquidity_left.</span><span style="color:#96b5b4;">into_balance</span><span>(),
+</span><span>        balance_right: starting_liquidity_right.</span><span style="color:#96b5b4;">into_balance</span><span>()
+</span><span>    };
+</span><span>    bins.</span><span style="color:#96b5b4;">insert</span><span>(starting_active_bin_id, starting_active_bin);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Create and share the pool
+</span><span>    </span><span style="color:#b48ead;">let</span><span> pool = Pool&lt;L, R&gt; {
+</span><span>        id: object::new(ctx),
+</span><span>        bins,
+</span><span>        active_bin_id: starting_active_bin_id,
+</span><span>        bin_step_bps,
+</span><span>    };
+</span><span>
+</span><span>    transfer::share_object(pool);
+</span><span>}
+</span></code></pre>
+<p>The function ends by creating a <code>Pool</code> instance and calling <code>transfer::share_object</code> on it. This publishes the <code>pool</code> to the network as a shared object, where anyone can interact with it. In practice, this means that anyone will be able to mutate the state of <code>pool</code> using the functions defined in our <code>liquidity_book</code> module. </p>
+<p>Combining everything gives the full <code>new</code> function:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move
+</span><span>entry fun new&lt;L, R&gt;(
+</span><span>    bin_step_bps: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    starting_price_mantissa: u256,
+</span><span>    </span><span style="color:#b48ead;">mut</span><span> starting_liquidity_left: Coin&lt;L&gt;,
+</span><span>    </span><span style="color:#b48ead;">mut</span><span> starting_liquidity_right: Coin&lt;R&gt;,
+</span><span>    bin_count: </span><span style="color:#b48ead;">u64</span><span>,
+</span><span>    ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext
+</span><span>) {
+</span><span>    </span><span style="color:#65737e;">// Start the first bin with ID in the middle of the u64 range, so as the
+</span><span>    </span><span style="color:#65737e;">// number of bins increase, the ID&#39;s don&#39;t over- or underflow
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_active_bin_id = </span><span style="color:#d08770;">MID_U64</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_price = ufp256::new(starting_price_mantissa);
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> bins = vec_map::empty();
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// the amount of bins left and right of the active bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bins_each_side = (bin_count - </span><span style="color:#d08770;">1</span><span>) / </span><span style="color:#d08770;">2</span><span>; 
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left_per_bin = starting_liquidity_left.</span><span style="color:#96b5b4;">value</span><span>() / (bins_each_side + </span><span style="color:#d08770;">1</span><span>);
+</span><span>    
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_step_price_factor = ufp256::from_fraction(
+</span><span>        (</span><span style="color:#d08770;">ONE_BPS </span><span>+ bin_step_bps) as u256, 
+</span><span>        </span><span style="color:#d08770;">ONE_BPS </span><span>as u256
+</span><span>    );
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> new_bin_price = starting_price.</span><span style="color:#96b5b4;">div</span><span>(bin_step_price_factor);
+</span><span>    </span><span style="color:#d08770;">1</span><span style="color:#b48ead;">u64</span><span>.range_do_eq!(bins_each_side, |</span><span style="color:#bf616a;">n</span><span>| {
+</span><span>        </span><span style="color:#65737e;">// Initialize new bin
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin_id = starting_active_bin_id - n;
+</span><span>        </span><span style="color:#b48ead;">let</span><span> balance_for_bin = starting_liquidity_left.</span><span style="color:#96b5b4;">split</span><span>(coin_left_per_bin, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>();
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin = PoolBin {
+</span><span>            price: new_bin_price,
+</span><span>            balance_left: balance_for_bin,
+</span><span>            balance_right: balance::zero(),
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Add bin
+</span><span>        bins.</span><span style="color:#96b5b4;">insert</span><span>(new_bin_id, new_bin);
+</span><span>        new_bin_price = new_bin_price.</span><span style="color:#96b5b4;">div</span><span>(bin_step_price_factor);
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Add right bins, very similar to above
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right_per_bin = starting_liquidity_right.</span><span style="color:#96b5b4;">value</span><span>() / (bins_each_side + </span><span style="color:#d08770;">1</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> new_bin_price = starting_price.</span><span style="color:#96b5b4;">mul</span><span>(bin_step_price_factor);
+</span><span>    </span><span style="color:#d08770;">1</span><span style="color:#b48ead;">u64</span><span>.range_do_eq!(bins_each_side, |</span><span style="color:#bf616a;">n</span><span>| {
+</span><span>        </span><span style="color:#65737e;">// Initialize new bin
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin_id = starting_active_bin_id + n;
+</span><span>        </span><span style="color:#b48ead;">let</span><span> balance_for_bin = starting_liquidity_right.</span><span style="color:#96b5b4;">split</span><span>(coin_right_per_bin, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>();
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_bin = PoolBin {
+</span><span>            price: new_bin_price,
+</span><span>            balance_left: balance::zero(),
+</span><span>            balance_right: balance_for_bin,
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Add bin
+</span><span>        bins.</span><span style="color:#96b5b4;">insert</span><span>(new_bin_id, new_bin);
+</span><span>        new_bin_price = new_bin_price.</span><span style="color:#96b5b4;">mul</span><span>(bin_step_price_factor);
+</span><span>    });
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Add starting bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> starting_bin = PoolBin {
+</span><span>        price: starting_price,
+</span><span>        balance_left: starting_liquidity_left.</span><span style="color:#96b5b4;">into_balance</span><span>(),
+</span><span>        balance_right: starting_liquidity_right.</span><span style="color:#96b5b4;">into_balance</span><span>()
+</span><span>    };
+</span><span>    bins.</span><span style="color:#96b5b4;">insert</span><span>(starting_active_bin_id, starting_bin);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Create and share the pool
+</span><span>    </span><span style="color:#b48ead;">let</span><span> pool = Pool&lt;L, R&gt; {
+</span><span>        id: object::new(ctx),
+</span><span>        bins,
+</span><span>        active_bin_id: starting_active_bin_id,
+</span><span>        bin_step_bps,
+</span><span>    };
+</span><span>
+</span><span>    transfer::share_object(pool);
+</span><span>}
+</span></code></pre>
+<h2 id="3-4-the-heart-of-a-dex-swaps">3.4 The Heart of a DEX: Swaps</h2>
+<p>Now that we have defined the types, and we can create a <code>Pool</code> with liquidity in it, we're ready to dive into the heart of the DEX: Swaps. For the sake of brevity, we will restrict ourselves to swaps from <code>L</code> to <code>R</code>, since swaps the other way, from <code>R</code> to <code>L</code> will be almost identical. </p>
+<h3 id="3-4-1-some-more-convenience-functions-for-pool">3.4.1 Some More Convenience Functions (for <code>Pool</code>)</h3>
+<p>Actually, one last small thing before we dive into swaps. To help us write the code for executing swaps, there are a few functions on the <code>Pool</code> type that we can define to make things a bit simpler. We will not necessarily use all of them in this article, but not to worry: they will all be used by the end of this series. These do what they say on the tin; hopefully these are understandable without any further explanation.</p>
+<p>Let's define the convenience functions underneath the <code>Pool</code> struct:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move
+</span><span>module liquidity_book::liquidity_book {
+</span><span>    [...]
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>Pool&lt;phantom L, phantom R&gt; has key {...}
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Returns a reference to a bin from a bin `id`.
+</span><span>    public fun get_bin&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;Pool&lt;L, R&gt;, id: &amp;</span><span style="color:#b48ead;">u64</span><span>): &amp;PoolBin&lt;L, R&gt; {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> bin = </span><span style="color:#bf616a;">self</span><span>.bins.</span><span style="color:#96b5b4;">get</span><span>(id);
+</span><span>        bin
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Public accessor for `pool.active_bin_id`.
+</span><span>    public fun get_active_bin_id&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;Pool&lt;L, R&gt;): </span><span style="color:#b48ead;">u64 </span><span>{
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.active_bin_id
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Returns the pool&#39;s active bin price.
+</span><span>    public fun get_active_price&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;Pool&lt;L, R&gt;): </span><span style="color:#d08770;">UFP256 </span><span>{
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_active_bin</span><span>().price
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Returns a reference to the pool `active_bin`.
+</span><span>    public fun get_active_bin&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;Pool&lt;L, R&gt;): &amp;PoolBin&lt;L, R&gt; {
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_bin</span><span>(&amp;</span><span style="color:#bf616a;">self</span><span>.active_bin_id)
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Private mutable accessor for the pool `active_bin`.
+</span><span>    fun get_active_bin_mut&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;): &amp;</span><span style="color:#b48ead;">mut </span><span>PoolBin&lt;L, R&gt; {
+</span><span>        </span><span style="color:#bf616a;">self</span><span>.bins.</span><span style="color:#96b5b4;">get_mut</span><span>(&amp;</span><span style="color:#bf616a;">self</span><span>.active_bin_id)
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">/// Setter for `pool.active_bin_id`.
+</span><span>    fun set_active_bin&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;, id: </span><span style="color:#b48ead;">u64</span><span>) {
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">self</span><span>.bins.</span><span style="color:#96b5b4;">contains</span><span>(&amp;id)) {
+</span><span>            </span><span style="color:#bf616a;">self</span><span>.active_bin_id = id;
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<h3 id="3-4-2-implementing-swaps">3.4.2 Implementing Swaps</h3>
+<p>Here is a quick recap of how swaps are executed in an LB DEX:</p>
+<ul>
+<li>While there is still some &quot;input token&quot; <code>L</code> remaining:
+<ul>
+<li>Try to execute the swap at the active bin price. </li>
+<li>If there is not enough liquidity to fulfill the swap inside the active bin, empty the active bin, and cross over to the next bin (i.e. change the active bin to the adjacent one). </li>
+<li>If the swap is not yet completed, and there are no more adjacent bins (meaning there is not enough liquidity inside the pool), the swap is aborted.</li>
+</ul>
+</li>
+</ul>
+<p>Translated into Move code, that results in: </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book.move
+</span><span style="color:#65737e;">// Swap `coin_left` for an equivalent amount of `R` in `Pool`
+</span><span>public fun swap_ltr&lt;L, R&gt;(</span><span style="color:#bf616a;">self</span><span>: &amp;</span><span style="color:#b48ead;">mut </span><span>Pool&lt;L, R&gt;, </span><span style="color:#b48ead;">mut</span><span> coin_left: Coin&lt;L&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext): Coin&lt;R&gt; {
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> result_coin = coin::zero&lt;R&gt;(ctx);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Keep emptying bins until `coin_left` is fully swapped
+</span><span>    </span><span style="color:#b48ead;">while </span><span>(coin_left.</span><span style="color:#96b5b4;">value</span><span>() &gt; </span><span style="color:#d08770;">0</span><span>) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> active_bin = </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">get_active_bin_mut</span><span>();
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> swap_left = coin_left.</span><span style="color:#96b5b4;">value</span><span>();
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> swap_right = active_bin.price.</span><span style="color:#96b5b4;">mul_u64</span><span>(swap_left);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// If there is not enough balance in this bin to fulfill
+</span><span>        </span><span style="color:#65737e;">// swap, adjust swap amounts to maximum.
+</span><span>        </span><span style="color:#b48ead;">let</span><span> bin_balance_right = active_bin.</span><span style="color:#96b5b4;">balance_right</span><span>();
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(swap_right &gt; bin_balance_right) {
+</span><span>            swap_right = bin_balance_right;
+</span><span>            swap_left = active_bin.price.</span><span style="color:#96b5b4;">div_u64</span><span>(bin_balance_right);
+</span><span>        };
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Execute swap
+</span><span>        active_bin.balance_left.</span><span style="color:#96b5b4;">join</span><span>(coin_left.</span><span style="color:#96b5b4;">split</span><span>(swap_left, ctx).</span><span style="color:#96b5b4;">into_balance</span><span>());
+</span><span>        result_coin.</span><span style="color:#96b5b4;">join</span><span>(active_bin.balance_right.</span><span style="color:#96b5b4;">split</span><span>(swap_right).</span><span style="color:#96b5b4;">into_coin</span><span>(ctx));
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Cross over one bin right if active bin is empty after swap,
+</span><span>        </span><span style="color:#65737e;">// abort if swap is not complete and no bins are left
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(active_bin.</span><span style="color:#96b5b4;">balance_right</span><span>() == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>            </span><span style="color:#b48ead;">let</span><span> bin_right_id = </span><span style="color:#bf616a;">self</span><span>.active_bin_id + </span><span style="color:#d08770;">1</span><span>;
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(coin_left.</span><span style="color:#96b5b4;">value</span><span>() &gt; </span><span style="color:#d08770;">0</span><span>) {
+</span><span>                assert!(</span><span style="color:#bf616a;">self</span><span>.bins.</span><span style="color:#96b5b4;">contains</span><span>(&amp;bin_right_id), EInsufficientPoolLiquidity);
+</span><span>            };
+</span><span>            </span><span style="color:#bf616a;">self</span><span>.</span><span style="color:#96b5b4;">set_active_bin</span><span>(bin_right_id);
+</span><span>        };
+</span><span>    };
+</span><span>    coin_left.</span><span style="color:#96b5b4;">destroy_zero</span><span>();
+</span><span>
+</span><span>    result_coin
+</span><span>}
+</span></code></pre>
+<p>Only really one thing to note here: The <code>coin_left.destroy_zero()</code> is necessary because the <code>Coin</code> type does not have the <a rel="noopener" target="_blank" href="https://docs.iota.org/developer/iota-101/move-overview/structs-and-abilities/drop"><code>drop</code> ability</a>. It's nearly impossible for the Move compiler to deduce from a piece of code whether a <code>Coin</code> still holds a value by the end of it. For that reason, we have to explicitly state that we are sure that <code>coin_left</code> no longer contains any value, and that it really can be destroyed safely.</p>
+<p>We also added a new error here for when the pool has run out of liquidity, but the swap is not yet complete. Don't forget to define <code>EInsufficientPoolLiquidity</code> next to <code>EEvenBinCount</code> at the top of your module like this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module liquidity_book::liquidity_book {
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">use </span><span>[...];
+</span><span>    </span><span style="color:#b48ead;">const </span><span>[...];
+</span><span>
+</span><span>    #[</span><span style="color:#bf616a;">error</span><span>]
+</span><span>    </span><span style="color:#b48ead;">const</span><span> EEvenBincount: vector&lt;</span><span style="color:#b48ead;">u8</span><span>&gt; =
+</span><span>        </span><span style="color:#b48ead;">b</span><span>&quot;</span><span style="color:#a3be8c;">Illegal bin count. Bin count is even but should be odd.</span><span>&quot;;
+</span><span>
+</span><span>    #[</span><span style="color:#bf616a;">error</span><span>]
+</span><span>    </span><span style="color:#b48ead;">const</span><span> EInsufficientPoolLiquidity: vector&lt;</span><span style="color:#b48ead;">u8</span><span>&gt; =
+</span><span>        </span><span style="color:#b48ead;">b</span><span>&quot;</span><span style="color:#a3be8c;">Insufficient Pool Liquidity: There is not enough liquidity inside the pool to fulfill the trade.</span><span>&quot;;
+</span><span>
+</span><span>    [...]
+</span><span>}
+</span></code></pre>
+<p>The code for swapping left-to-right, <code>swap_rtl</code> is pretty much identical, but with any <code>left</code>/<code>right</code> variables swapped, and most crucially the multiplication (<code>R = pL</code>) needs to be replaced by division (<code>L = R/p</code>). It's good practice to try and code it yourself, but if you get stuck, you can always take a look at the <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-liquidity-book/blob/b18f9eedd82acf1a6da3f0a7ecccfd171aa69746/sources/liquidity_book.move#L207-L243"><code>swap_rtl</code> reference implementation</a>.</p>
+<p>And that's it! We can now create an LB pool and execute swaps.</p>
+<h1 id="4-does-it-work-basic-testing">4. Does it Work? Basic Testing</h1>
+<p>Having gone through the effort of writing all that code, you would probably like to see that it actually works. So, let's write a test to show exactly that.</p>
+<p>Because the code we wrote has some complexity, creating a test for our <code>Pool</code> requires some non-trivial setup. The final part in this article series will dive much more deeply into testing, so we will not go into a lot of detail here. Nonetheless, hopefully the tests below are enough for you to convince yourself that the code we wrote works as intended. </p>
+<h2 id="4-1-single-bin-test">4.1 Single Bin Test</h2>
+<p>We'll start out by writing a relatively simple test that shows a trade within a single bin is successful. Open up <code>liquidity_book_tests.move</code>. We will need a few imports, structs and constants:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book_tests.move
+</span><span>#[</span><span style="color:#bf616a;">test_only</span><span>]
+</span><span>module liquidity_book::liquidity_book_tests {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::test_scenario as ts;
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::test_utils::assert_eq;
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::coin::{</span><span style="color:#b48ead;">Self</span><span>};
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">use </span><span>liquidity_book::liquidity_book::{</span><span style="color:#b48ead;">Self</span><span>, Pool};
+</span><span>    </span><span style="color:#b48ead;">use </span><span>liquidity_book::ufp256::{</span><span style="color:#b48ead;">Self</span><span>};
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>LEFT has drop {}
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>RIGHT has drop {}
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">20</span><span>; </span><span style="color:#65737e;">// 20 BPS, or 0.2%
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>: u256 = </span><span style="color:#d08770;">5000000000000000000</span><span>; </span><span style="color:#65737e;">// 0.5
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#d08770;">ONE_BPS</span><span>: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">10000</span><span>;
+</span><span>}
+</span></code></pre>
+<p>We import some libraries needed for testing, the <code>liquidity_book</code> and <code>ufp256</code> modules. We also need the <code>coin</code> module to mint test tokens. </p>
+<p>Also, remember the <code>phantom</code> types mentioned in the beginning of this article? The <code>LEFT</code> and <code>RIGHT</code> structs that we define here will be used exactly in that way. We only define these so that we can create two &quot;testing tokens&quot; <code>Coin&lt;LEFT&gt;</code> and <code>Coin&lt;RIGHT&gt;</code>.</p>
+<p>The constants are some default values that we use to define the testing LB pools. </p>
+<p>Now let's start writing a test <code>swap_single_bin</code>. We begin by creating a <code>Pool</code>:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book_tests.move
+</span><span>module liquidity_book::liquidity_book_tests {
+</span><span>    [...]
+</span><span>
+</span><span>    #[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>    fun </span><span style="color:#96b5b4;">swap_single_bin</span><span>() {
+</span><span>        </span><span style="color:#65737e;">// Test starting boilerplate
+</span><span>        </span><span style="color:#b48ead;">let</span><span> admin_addr = @</span><span style="color:#d08770;">0xAAAA</span><span>;
+</span><span>        </span><span style="color:#b48ead;">let mut</span><span> ts = ts::begin(admin_addr);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Initialize pool with 10bln LEFT and 10bln RIGHT tokens, all inside 1 bin
+</span><span>        </span><span style="color:#b48ead;">let</span><span> bln_10 = </span><span style="color:#d08770;">10 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>        liquidity_book::new&lt;LEFT, RIGHT&gt;(
+</span><span>            </span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>,
+</span><span>            </span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>,
+</span><span>            coin::mint_for_testing&lt;LEFT&gt;(bln_10, ts.</span><span style="color:#96b5b4;">ctx</span><span>()),
+</span><span>            coin::mint_for_testing&lt;RIGHT&gt;(bln_10, ts.</span><span style="color:#96b5b4;">ctx</span><span>()),
+</span><span>            </span><span style="color:#d08770;">1</span><span>,
+</span><span>            ts.</span><span style="color:#96b5b4;">ctx</span><span>()
+</span><span>        );
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Here, we use <code>coin::mint_for_testing&lt;T&gt;</code>to get the test tokens that we need. We set the number of bins to 1, so that we can be sure that a swap executes only inside that one bin.</p>
+<p>Next, we get the <code>Pool</code> that we created from global storage (using <code>take_shared</code>), and perform the swaps with small enough amounts so that <code>pool</code> doesn't run out of liquidity. We then check that the returned amounts match the expected amounts. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book_tests.move
+</span><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_single_bin</span><span>() {
+</span><span>    [...]
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Set trader address for next transactions
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trader_addr = @</span><span style="color:#d08770;">0xBBBB</span><span>;
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(trader_addr);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Perform swaps, 1bln of both
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_left = </span><span style="color:#d08770;">1 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_right = </span><span style="color:#d08770;">1 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> pool = ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left_in = coin::mint_for_testing&lt;LEFT&gt;(trade_left, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right_in = coin::mint_for_testing&lt;RIGHT&gt;(trade_right, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right_result = pool.</span><span style="color:#96b5b4;">swap_ltr</span><span>(coin_left_in, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left_result = pool.</span><span style="color:#96b5b4;">swap_rtl</span><span>(coin_right_in, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Check swap results
+</span><span>    </span><span style="color:#b48ead;">let</span><span> price = ufp256::new(</span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_value_right = price.</span><span style="color:#96b5b4;">mul_u64</span><span>(trade_left);
+</span><span>    </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_right_result.</span><span style="color:#96b5b4;">value</span><span>(), expected_value_right);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_value_left = price.</span><span style="color:#96b5b4;">div_u64</span><span>(trade_right);
+</span><span>    </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_left_result.</span><span style="color:#96b5b4;">value</span><span>(), expected_value_left);
+</span><span>}
+</span></code></pre>
+<p>Finally, we have to &quot;return&quot; the <code>coin_right_result</code> and <code>coin_left_result</code> to the trader, and return the shared <code>pool</code> object to global storage. (These are needed to make the Move compiler happy. You can remove these lines to see what that means.) Then we can end the test with <code>ts.end()</code>.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book_tests.move
+</span><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_single_bin</span><span>() {
+</span><span>    [...]
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Return coins to owner to satisfy their lack of drop ability
+</span><span>    transfer::public_transfer(coin_right_result, trader_addr);
+</span><span>    transfer::public_transfer(coin_left_result, trader_addr);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Test end boilerplate
+</span><span>    ts::return_shared(pool);
+</span><span>    ts.</span><span style="color:#96b5b4;">end</span><span>();
+</span><span>}
+</span></code></pre>
+<p>Combining the parts above gives the full <code>swap_single_bin</code> test:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">// liquidity_book_tests.move
+</span><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_single_bin</span><span>() {
+</span><span>    </span><span style="color:#65737e;">// Test starting boilerplate
+</span><span>    </span><span style="color:#b48ead;">let</span><span> admin_addr = @</span><span style="color:#d08770;">0xAAAA</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = ts::begin(admin_addr);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Initialize pool with 10bln LEFT and 10bln RIGHT tokens, all inside 1 bin
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bln_10 = </span><span style="color:#d08770;">10 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    liquidity_book::new&lt;LEFT, RIGHT&gt;(
+</span><span>        </span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>,
+</span><span>        </span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>,
+</span><span>        coin::mint_for_testing&lt;LEFT&gt;(bln_10, ts.</span><span style="color:#96b5b4;">ctx</span><span>()),
+</span><span>        coin::mint_for_testing&lt;RIGHT&gt;(bln_10, ts.</span><span style="color:#96b5b4;">ctx</span><span>()),
+</span><span>        </span><span style="color:#d08770;">1</span><span>,
+</span><span>        ts.</span><span style="color:#96b5b4;">ctx</span><span>()
+</span><span>    );
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Set trader address for next transactions
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trader_addr = @</span><span style="color:#d08770;">0xBBBB</span><span>;
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(trader_addr);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Perform swaps, 1bln of both
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_left = </span><span style="color:#d08770;">1 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_right = </span><span style="color:#d08770;">1 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> pool = ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left_in = coin::mint_for_testing&lt;LEFT&gt;(trade_left, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right_in = coin::mint_for_testing&lt;RIGHT&gt;(trade_right, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right_result = pool.</span><span style="color:#96b5b4;">swap_ltr</span><span>(coin_left_in, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left_result = pool.</span><span style="color:#96b5b4;">swap_rtl</span><span>(coin_right_in, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Check swap results
+</span><span>    </span><span style="color:#b48ead;">let</span><span> price = ufp256::new(</span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_value_right = price.</span><span style="color:#96b5b4;">mul_u64</span><span>(trade_left);
+</span><span>    </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_right_result.</span><span style="color:#96b5b4;">value</span><span>(), expected_value_right);
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_value_left = price.</span><span style="color:#96b5b4;">div_u64</span><span>(trade_right);
+</span><span>    </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_left_result.</span><span style="color:#96b5b4;">value</span><span>(), expected_value_left);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Return coins to owner to satisfy their lack of drop ability
+</span><span>    transfer::public_transfer(coin_right_result, trader_addr);
+</span><span>    transfer::public_transfer(coin_left_result, trader_addr);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Test end boilerplate
+</span><span>    ts::return_shared(pool);
+</span><span>    ts.</span><span style="color:#96b5b4;">end</span><span>();
+</span><span>}
+</span></code></pre>
+<h2 id="4-2-multiple-bin-test">4.2 Multiple Bin Test</h2>
+<p>The previous test shows that swaps inside a single bin work. Since the LB DEX model is fundamentally based on swaps changing the price by crossing over bins, you probably want to test that swaps across multiple bins work well too. If you want to add a test for that, you can of course write one yourself, but there is also an example <code>swap_multiple_bins</code> test included as an appendix at the end of this article, which you can copy. </p>
+<h2 id="4-3-running-the-tests">4.3 Running the Tests</h2>
+<p>To run your tests (including any other ones you may write), use the IOTA CLI. Inside the <code>liquidity_book</code> folder, run:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#bf616a;">$</span><span> iota move test
+</span></code></pre>
+<p>If everything went well, all the tests should pass. The output will look like this:</p>
+<p><img src="https://teunvw14.github.io/posts/iota-move-dex-pt1/test_results.png" alt="Test results screenshot" /></p>
+<h1 id="5-conclusion">5. Conclusion</h1>
+<p>That's all there is to it. We have successfully built our own DEX smart contract with Move! If you came all this way, thank you for reading.</p>
+<p>If you want to learn more, in the next article in this series, we will discover how our smart contract can be expanded so that anyone can provide liquidity and start earning fees.</p>
+<h1 id="6-challenges">6. Challenges</h1>
+<ul>
+<li>Implement price slippage limits in the swap functions <code>swap_ltr</code> and <code>swap_rtl</code>. Add a <code>max_slippage</code> parameter to the swap functions, and modify the functions to abort if the price change is larger than <code>max_slippage</code>.</li>
+<li>If you really want to challenge yourself, you can create a <em>router</em> function that can chain swaps between different pools. That is, a function generic over <code>L, R</code> that takes a list of <code>Pool</code>s, and if it does not contain a <code>Pool&lt;L, R&gt;</code>, it finds the shortest chain of pools <code>Pool&lt;L, T_1&gt;</code>, <code>Pool&lt;T_1, T_2&gt;</code>, ... <code>Pool&lt;T_{n-1}, T_n&gt;</code>, <code>Pool&lt;T_n, R&gt;</code> that can transform <code>L</code> into <code>R</code>, and executes swaps across that chain of pools. </li>
+</ul>
+<h1 id="appendix-a-about-ufp256-and-why-floating-point-numbers-are-bad">Appendix A: About <code>UFP256</code> and Why Floating Point Numbers Are Bad</h1>
+<p>Why do we need a custom fractional number type? The honest answer is that we do not really. The IOTA Move framework provides <a rel="noopener" target="_blank" href="https://github.com/iotaledger/iota/blob/43412a93f4ef752104460ef630daea0631621f52/crates/iota-framework/packages/move-stdlib/sources/uq64_64.move">the <code>uq64_64</code> type</a>. It would probably work for our purposes, but it has limited precision and some useful functions missing in its API. To fill the gap, I created the <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-fixed-point/blob/main/sources/ufp256.move"><code>UFP256</code></a> type to use in this project. It  works identically to <code>uq64_64</code>, but has higher precision and an API that is a little bit more extensive. Whether the extra precision makes any difference is unknown. But the more extensive API is definitely nicer to work with.</p>
+<p>You might be familiar with <a rel="noopener" target="_blank" href="https://en.wikipedia.org/wiki/Floating-point_arithmetic">floating-point numbers</a> and wonder why we don't just use those here. Especially since they are used in most programming languages to represent fractional values. It's not so much that they can't be implemented in smart contract programming languages. The reason you will most likely never see them in any smart contract programming contexts is that floating-point numbers require a lot more computation than fixed-point numbers, and in smart contracts, more computations means paying more gas. And no one wants to pay more gas. So floating-point numbers are a no-go.</p>
+<h1 id="appendix-b-multiple-bin-test">Appendix B: Multiple Bin Test</h1>
+<p>Below you can find the <code>swap_multiple_bins</code> test, as taken from <a rel="noopener" target="_blank" href="https://github.com/teunvw14/move-liquidity-book/blob/19f51da5b11beab9d665a3f0e1dd426fe1edecda/tests/liquidity_book_tests.move#L74-L125">the reference implementation</a>. It is largely the same as the single bin test; the only difference is that we need to do some more complicated calculations to get <code>expected_value_right</code>, the expected amount of <code>RIGHT</code> from the trade. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#65737e;">/// Test swaps by doing a swap crossing over one bin, checking that the received
+</span><span style="color:#65737e;">/// amount is correct.
+</span><span>#[</span><span style="color:#bf616a;">test</span><span>]
+</span><span>fun </span><span style="color:#96b5b4;">swap_multiple_bins</span><span>() {
+</span><span>    </span><span style="color:#b48ead;">let</span><span> admin_addr = @</span><span style="color:#d08770;">0xAAAA</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> ts = ts::begin(admin_addr);
+</span><span>
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Initialize pool with 2bln LEFT and/or RIGHT per bin.
+</span><span>    </span><span style="color:#b48ead;">let</span><span> bin_count = </span><span style="color:#d08770;">3</span><span>;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_amount_per_bin = </span><span style="color:#d08770;">2 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_amount_per_bin = </span><span style="color:#d08770;">2 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_amount = left_amount_per_bin * ((bin_count + </span><span style="color:#d08770;">1</span><span>) / </span><span style="color:#d08770;">2</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_amount = right_amount_per_bin * ((bin_count + </span><span style="color:#d08770;">1</span><span>) / </span><span style="color:#d08770;">2</span><span>);
+</span><span>    liquidity_book::new&lt;LEFT, RIGHT&gt;(
+</span><span>        </span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>,
+</span><span>        </span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>,
+</span><span>        coin::mint_for_testing&lt;LEFT&gt;(left_amount, ts.</span><span style="color:#96b5b4;">ctx</span><span>()),
+</span><span>        coin::mint_for_testing&lt;RIGHT&gt;(right_amount, ts.</span><span style="color:#96b5b4;">ctx</span><span>()),
+</span><span>        bin_count,
+</span><span>        ts.</span><span style="color:#96b5b4;">ctx</span><span>()
+</span><span>    );
+</span><span>
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// We will trade 6 LEFT for ~3 RIGHT
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trade_amount_left = </span><span style="color:#d08770;">6 </span><span>* </span><span style="color:#d08770;">10</span><span style="color:#b48ead;">u64</span><span>.</span><span style="color:#96b5b4;">pow</span><span>(</span><span style="color:#d08770;">9</span><span>);
+</span><span>
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Calculate expected swap results (left-to-right)
+</span><span>    </span><span style="color:#b48ead;">let</span><span> first_bin_price = ufp256::new(</span><span style="color:#d08770;">DEFAULT_PRICE_MANTISSA</span><span>);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> second_bin_price = first_bin_price.</span><span style="color:#96b5b4;">mul</span><span>(ufp256::from_fraction((</span><span style="color:#d08770;">ONE_BPS</span><span>+</span><span style="color:#d08770;">DEFAULT_BIN_STEP</span><span>) as u256, </span><span style="color:#d08770;">ONE_BPS </span><span>as u256));
+</span><span>
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_from_first_bin = right_amount_per_bin;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_traded_in_first_bin = first_bin_price.</span><span style="color:#96b5b4;">div_u64</span><span>(right_amount_per_bin);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> left_remaining = trade_amount_left - left_traded_in_first_bin;
+</span><span>    </span><span style="color:#b48ead;">let</span><span> right_from_second_bin = second_bin_price.</span><span style="color:#96b5b4;">mul_u64</span><span>(left_remaining);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> expected_value_right = right_from_first_bin + right_from_second_bin;
+</span><span>
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Perform swaps
+</span><span>    </span><span style="color:#b48ead;">let</span><span> trader_addr = @</span><span style="color:#d08770;">0xABAB</span><span>;
+</span><span>    ts.</span><span style="color:#96b5b4;">next_tx</span><span>(trader_addr);
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_left = coin::mint_for_testing&lt;LEFT&gt;(trade_amount_left, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">let mut</span><span> pool= ts.take_shared&lt;Pool&lt;LEFT, RIGHT&gt;&gt;();
+</span><span>    </span><span style="color:#b48ead;">let</span><span> coin_right = pool.</span><span style="color:#96b5b4;">swap_ltr</span><span>(coin_left, ts.</span><span style="color:#96b5b4;">ctx</span><span>());
+</span><span>
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Assert that we received the expected amount of RIGHT tokens
+</span><span>    </span><span style="color:#96b5b4;">assert_eq</span><span>(coin_right.</span><span style="color:#96b5b4;">value</span><span>(), expected_value_right);
+</span><span>
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Return coins to owner
+</span><span>    transfer::public_transfer(coin_right, trader_addr);
+</span><span>
+</span><span>
+</span><span>    ts::return_shared(pool);
+</span><span>    ts.</span><span style="color:#96b5b4;">end</span><span>();
+</span><span>}
+</span></code></pre>
+
+        </section>
+
+        
+
+    </article>
+</main>
+
+
+
+        <footer>
+  <div style="display:flex">
+    
+        <a class="soc" href=https:&#x2F;&#x2F;github.com&#x2F;teunvw14 title=GitHub>
+            <i data-feather=github></i>
+        </a>
+    
+        <a class="soc" href=https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;teun-van-wezel&#x2F; title=LinkedIn>
+            <i data-feather=linkedin></i>
+        </a>
+    
+  </div>
+  <div class="footer-info">
+    2026 © Teun van Wezel | Built with <a href="https://www.getzola.org/">Zola</a> / <a
+      href="https://github.com/XXXMrG/archie-zola">Archie-Zola Theme</a>
+  </div>
+</footer>
+
+
+<script>
+    feather.replace();
+</script>
+
+
+    </div>
+</body>
+
+</html>

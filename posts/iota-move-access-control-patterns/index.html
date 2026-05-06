@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+
+    
+        <title>
+             IOTA Move: Common Object Access Control Patterns for Smart Contracts
+            
+        </title>
+
+        
+            <meta property="og:title" content="IOTA Move: Common Object Access Control Patterns for Smart Contracts" />
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+         <link rel="icon" type="image/png" href=&#x2F;icon&#x2F;favicon.png />
+    
+
+    
+
+    
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4SM5P4FCHX"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-4SM5P4FCHX');
+        </script>
+    
+
+    
+    
+        <script src=https://teunvw14.github.io/js/feather.min.js></script>
+    
+
+
+    
+        <link href=https://teunvw14.github.io/css/fonts.css rel="stylesheet" />
+    
+
+    <link rel="stylesheet" type="text/css" media="screen" href=https://teunvw14.github.io/css/main.css />
+
+    
+        <link
+            rel="stylesheet"
+            id="darkModeStyle"
+            type="text/css"
+            href=https://teunvw14.github.io/css/dark.css
+            
+            
+                disabled
+            
+        />
+    
+
+    
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+    
+
+
+    
+
+
+</head>
+
+
+<body>
+    <div class="content">
+        <header>
+    
+    <div class="main" id="main_title">
+        <img src="../../favicon_hires.png" style="max-height: 24px; margin-right: 8px;"/>
+        <a href=https:&#x2F;&#x2F;teunvw14.github.io>Teun van Wezel&#x27;s Tech Blog</a>
+    </div>
+    
+    <nav>
+        
+            <a href=&#x2F;>Blog</a>
+        
+            <a href=&#x2F;posts>All posts</a>
+        
+
+        
+            |
+
+            
+                <a href=&#x2F;>en</a>
+            
+        
+
+        
+            | <a id="dark-mode-toggle" onclick="toggleTheme()" href=""></a>
+            <script src=https://teunvw14.github.io/js/themetoggle.js></script>
+        
+    </nav>
+</header>
+
+
+        
+    
+<main>
+    <article>
+        <div class="title">
+            <h1 class="title">IOTA Move: Common Object Access Control Patterns for Smart Contracts</h1>
+            <div class="meta">
+                
+                on  2025-04-18
+
+                
+            </div>
+        </div>
+
+        
+
+        <section class="body">
+            <p>When creating a smart contract with Move, a challenge that you will often have to solve, is how to restrict access to an object. This article explores some common object access control patterns. The patterns will become increasingly permissive, with each pattern allowing for more people to directly mutate the object. Let's dive right into it.</p>
+<h1 id="immutable-objects">Immutable Objects</h1>
+<p>Some things aren't meant to be changed. Think of emitted events, the metadata of a currency/Coin, protocol parameters, etc.. </p>
+<p>Move is designed so that objects can be mutated only in ways that are specified in the defining module. So objects are basically immutable by default. Let's take a look at an example:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module my_shared_object::my_shared_object {
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>MagicImmutableObject has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">magic_constant</span><span>: </span><span style="color:#b48ead;">u64
+</span><span>    }
+</span><span>
+</span><span>    fun </span><span style="color:#96b5b4;">init</span><span>(ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> magic_constant = </span><span style="color:#d08770;">42</span><span>;
+</span><span>        </span><span style="color:#b48ead;">let</span><span> magic_immutable_object = MagicImmutableObject {
+</span><span>            id: object::new(ctx),
+</span><span>            magic_constant
+</span><span>        };
+</span><span>
+</span><span>        transfer::freeze_object(magic_immutable_object);
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>By calling <code>freeze_object</code>, you prevent the object from ever being mutated. Any transactions trying to mutate <code>immutable_magic_object</code> will fail with the <a rel="noopener" target="_blank" href="https://github.com/iotaledger/iota/blob/522637331237ad597341df449dbd1b76cf2d1b8e/crates/iota-types/src/execution_status.rs#L265-L266">InvalidObjectByMutRef error</a>.</p>
+<p>Now the only way you can interact with the <code>immutable_magic_object</code> is by immutable reference. When you publish this package, the <code>MagicImmutableObject</code> will be created and get assigned a <code>UID</code>. You can then pass this identifier to functions that take arguments of type <code>&amp;MagicImmutableObject</code>. Note that you still cannot use the reference to read fields from the object directly. The following code will <strong>not</strong> work:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module some_package::some_module {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>my_shared_object::my_shared_object::MagicImmutableObject;
+</span><span>
+</span><span>    fun </span><span style="color:#96b5b4;">some_function</span><span>(magic_object: &amp;MagicImmutableObject) {
+</span><span>        </span><span style="color:#65737e;">// This will not compile:
+</span><span>        </span><span style="color:#b48ead;">let</span><span> magic_constant = magic_object.magic_constant;
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Doing this leads to the following compilation error: &quot;Invalid access of field <code>magic_constant</code> on the struct <code>my_shared_object::my_shared_object::MagicImmutableObject</code>. The field <code>magic_constant</code> can only be accessed within the module <code>my_shared_object::my_shared_object</code> since it defines <code>MagicImmutableObject</code>.&quot;</p>
+<p>If you want to be able to read the magic constant, you need to write a public accessor function in <code>my_shared_object::my_shared_object</code> like this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module my_shared_object::my_shared_object {
+</span><span>    ... </span><span style="color:#65737e;">// struct definition and init
+</span><span>
+</span><span>    public fun </span><span style="color:#96b5b4;">magic_constant</span><span>(m: &amp;MagicImmutableObject): </span><span style="color:#b48ead;">u64 </span><span>{
+</span><span>        m.magic_constant
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Then you can use this function like this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>fun </span><span style="color:#96b5b4;">some_function</span><span>(magic_object: &amp;MagicImmutableObject) {
+</span><span>    </span><span style="color:#65737e;">// This now works!
+</span><span>    </span><span style="color:#b48ead;">let</span><span> magic_constant = magic_object.</span><span style="color:#96b5b4;">magic_constant</span><span>();
+</span><span>
+</span><span>    ... </span><span style="color:#65737e;">// do stuff with magic_constant
+</span><span>}
+</span></code></pre>
+<h1 id="admin-pattern">Admin Pattern</h1>
+<p>Imagine you run an on-chain casino. Users can bet their IOTA tokens against the house in a variety of classic gambling games. Roulette, Blackjack, Slots, what have you. Now, unless you run an incredibly crooked casino, a gambler will inevitably get lucky, and win a bet. And so you need to pay up. In conclusion: the house needs to have IOTA tokens. </p>
+<p>So, your gambling smart contracts need to hold some IOTA tokens, but of course you don't want these IOTA tokens to be accessible by everyone. Only you, the owner of the casino, should be able to access the casino treasury, to both add to it and withdraw from it. This is where the <strong>Admin Pattern</strong> comes in. </p>
+<p>The <strong>Admin Pattern</strong> is when, on module publish, you create an <code>AdminCap</code> that you then require for any mutations of the relevant object. </p>
+<p>Let's take a look at some code.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module casino::house {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::iota::</span><span style="color:#d08770;">IOTA</span><span>;
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::balance::{</span><span style="color:#b48ead;">Self</span><span>, Balance};
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>CasinoHouse has key {
+</span><span>        </span><span style="color:#bf616a;">id </span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">treasury</span><span>: Balance&lt;IOTA&gt;
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// This struct functions as a key to the treasury. 
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>AdminCap has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID
+</span><span>    }
+</span><span>
+</span><span>    fun </span><span style="color:#96b5b4;">init</span><span>(ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#65737e;">// Create and share house
+</span><span>        </span><span style="color:#b48ead;">let</span><span> house = CasinoHouse {
+</span><span>            object::new(ctx),
+</span><span>            treasury: balance::zero&lt;IOTA&gt;()
+</span><span>        };
+</span><span>        transfer::share_object(house);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Create the AdminCap and send to the package publisher
+</span><span>        </span><span style="color:#b48ead;">let</span><span> publisher = ctx.</span><span style="color:#96b5b4;">sender</span><span>();
+</span><span>        </span><span style="color:#b48ead;">let</span><span> admin_cap = AdminCap {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        transfer::transfer(admin_cap, publisher);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Though this function is public, by requiring the `AdminCap` as an 
+</span><span>    </span><span style="color:#65737e;">// argument, this function can only ever be successfully called by the owner
+</span><span>    </span><span style="color:#65737e;">// of the AdminCap object. 
+</span><span>    public fun </span><span style="color:#96b5b4;">empty_treasury</span><span>(_: &amp;AdminCap, house: &amp;</span><span style="color:#b48ead;">mut</span><span> CasinoHouse, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> full_treasury_as_coin = house.treasury.</span><span style="color:#96b5b4;">withdraw_all</span><span>().</span><span style="color:#96b5b4;">into_coin</span><span>(ctx);
+</span><span>        transfer::public_transfer(full_treasury_as_coin, ctx.</span><span style="color:#96b5b4;">sender</span><span>());
+</span><span>    }
+</span><span>    
+</span><span>    </span><span style="color:#65737e;">// By requiring the `AdminCap` here, you make sure that someone without an 
+</span><span>    </span><span style="color:#65737e;">// `AdminCap` doesn&#39;t accidentally deposits funds into the house treasury, 
+</span><span>    </span><span style="color:#65737e;">// where they can no longer access their funds.
+</span><span>    public fun </span><span style="color:#96b5b4;">deposit_treasury</span><span>(_: &amp;AdminCap, house: &amp;</span><span style="color:#b48ead;">mut</span><span> CasinoHouse, deposit: Coin&lt;IOTA&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        house.treasury.</span><span style="color:#96b5b4;">join</span><span>(deposit.</span><span style="color:#96b5b4;">into_balance</span><span>());
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Now whoever publishes this package will be the only one that can access the house treasury. But be careful: if you lose access to the address holding the <code>AdminCap</code> - you will lose access the funds within the <code>CasinoHouse</code>.</p>
+<h1 id="admin-invite-only-pattern">Admin Invite Only Pattern</h1>
+<p>Say you found a few business partners to help you run your casino. For your daily operations, these business partners will also need to be able to access the casino treasury. (I hope you trust these guys!) So, you need a way to create multiple <code>AdminCap</code>s. We'll create a new <code>OwnerCap</code> capability type that lets the holder create new <code>AdminCap</code>s.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module casino::house {
+</span><span>    ...
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// This struct functions as a key to the treasury. 
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>AdminCap has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// This struct functions as authorization for creating `AdminCap` objects
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>OwnerCap has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Creating new AdminCap objects requires the `OwnerCap`.
+</span><span>    public fun </span><span style="color:#96b5b4;">create_admin_cap</span><span>(_: &amp;OwnerCap, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> admin_cap = AdminCap {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        transfer::transfer(admin_cap, ctx.</span><span style="color:#96b5b4;">sender</span><span>());
+</span><span>    }
+</span><span>
+</span><span>    fun </span><span style="color:#96b5b4;">init</span><span>(ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        ... </span><span style="color:#65737e;">// Create and share CasinoHouse
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Create OwnerCap and AdminCap and send to the package publisher
+</span><span>        </span><span style="color:#b48ead;">let</span><span> publisher = ctx.</span><span style="color:#96b5b4;">sender</span><span>();
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> owner_cap = OwnerCap {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        </span><span style="color:#b48ead;">let</span><span> admin_cap = AdminCap {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        transfer::transfer(owner_cap, publisher);
+</span><span>        transfer::transfer(admin_cap, publisher);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Same as before
+</span><span>    public fun </span><span style="color:#96b5b4;">empty_treasury</span><span>(_: &amp;AdminCap, house: &amp;</span><span style="color:#b48ead;">mut</span><span> CasinoHouse, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) { ... }
+</span><span>    public fun </span><span style="color:#96b5b4;">deposit_treasury</span><span>(_: &amp;AdminCap, house: &amp;</span><span style="color:#b48ead;">mut</span><span> CasinoHouse, deposit: Coin&lt;IOTA&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) { ... }
+</span><span>}
+</span></code></pre>
+<p>Note that one disadvantage of this is that once you've given someone an <code>AdminCap</code>, there's no way to &quot;take it away&quot;, which might become a problem if you want to split ways with one of your business partners.</p>
+<h1 id="whitelist-blacklist">Whitelist / Blacklist</h1>
+<p>A solution to not being able to remove access as the owner comes in a different access control method: the whitelist and the blacklist. A whitelist says who should have access. A blacklist specifies who should <em>not</em> have access. In this model, the </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module whitelist_package::whitelist_module {
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>AppState has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">whitelist</span><span>: vector&lt;address&gt;
+</span><span>    }
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>AdminCap has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID
+</span><span>    }
+</span><span>
+</span><span>    fun </span><span style="color:#96b5b4;">init</span><span>(ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#65737e;">// Create AdminCap and send to the package publisher
+</span><span>        </span><span style="color:#b48ead;">let</span><span> publisher = ctx.</span><span style="color:#96b5b4;">sender</span><span>();
+</span><span>        </span><span style="color:#b48ead;">let</span><span> admin_cap = AdminCap {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        transfer::transfer(admin_cap, publisher);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Create AppState that will hold the whitelist
+</span><span>        </span><span style="color:#b48ead;">let</span><span> state = AppState {
+</span><span>            id: object::new(ctx),
+</span><span>            whitelist: vector[]
+</span><span>        };
+</span><span>        
+</span><span>        transfer::share_object(state);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Require AdminCap to add people to whitelist
+</span><span>    public fun </span><span style="color:#96b5b4;">whitelist_add</span><span>(_: &amp;AdminCap, addr: address, state: &amp;</span><span style="color:#b48ead;">mut</span><span> AppState) {
+</span><span>        state.whitelist.</span><span style="color:#96b5b4;">push_back</span><span>(addr);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Require AdminCap to remove people from whitelist
+</span><span>    public fun </span><span style="color:#96b5b4;">whitelist_remove</span><span>(_: &amp;AdminCap, addr: address, state: &amp;</span><span style="color:#b48ead;">mut</span><span> AppState) {
+</span><span>        </span><span style="color:#b48ead;">let </span><span>(address_in_whitelist, idx) = state.whitelist.</span><span style="color:#96b5b4;">index_of</span><span>(&amp;addr);
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(address_in_whitelist) {
+</span><span>            state.whitelist.</span><span style="color:#96b5b4;">remove</span><span>(idx);
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>    #[</span><span style="color:#bf616a;">error</span><span>]
+</span><span>    </span><span style="color:#b48ead;">const</span><span> EAddressNotWhitelisted: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">0</span><span>;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Require the AppState (of which only one exists) as an argument, and throw
+</span><span>    </span><span style="color:#65737e;">// an error if the calling address is not on the whitelist.
+</span><span>    public fun </span><span style="color:#96b5b4;">whitelist_only_func</span><span>(state: &amp;</span><span style="color:#b48ead;">mut</span><span> AppState, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        assert!(state.whitelist.</span><span style="color:#96b5b4;">contains</span><span>(&amp;ctx.</span><span style="color:#96b5b4;">sender</span><span>()), 
+</span><span>            EAddressNotWhitelisted);
+</span><span>
+</span><span>        ... </span><span style="color:#65737e;">// do stuff
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>A blacklist works almost exactly the same, except that we assert that someone is <strong>not</strong> on the blacklist. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module blacklist_package::blacklist_module {
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>AppState has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">blacklist</span><span>: vector&lt;address&gt; </span><span style="color:#65737e;">// instead of whitelist
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// All the stuff below is basically the same
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>AdminCap has key {...}
+</span><span>    fun </span><span style="color:#96b5b4;">init</span><span>(ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {...}
+</span><span>    public fun </span><span style="color:#96b5b4;">blacklist_add</span><span>(_: &amp;AdminCap, addr: address, state: &amp;</span><span style="color:#b48ead;">mut</span><span> AppState) {...}
+</span><span>    public fun </span><span style="color:#96b5b4;">blacklist_remove</span><span>(_: &amp;AdminCap, addr: address, state: &amp;</span><span style="color:#b48ead;">mut</span><span> AppState) {...}
+</span><span>
+</span><span>    #[</span><span style="color:#bf616a;">error</span><span>]
+</span><span>    </span><span style="color:#b48ead;">const</span><span> EAddressBlacklisted: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">0</span><span>;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Require the AppState (of which only one exists) as an argument, and throw
+</span><span>    </span><span style="color:#65737e;">// an error if the calling address is blacklisted.
+</span><span>    public fun </span><span style="color:#96b5b4;">blacklist_only_func</span><span>(state: &amp;</span><span style="color:#b48ead;">mut</span><span> AppState, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        assert!(!state.blacklist.</span><span style="color:#96b5b4;">contains</span><span>(&amp;ctx.</span><span style="color:#96b5b4;">sender</span><span>()), 
+</span><span>            EAddressBlacklisted);
+</span><span>
+</span><span>        ... </span><span style="color:#65737e;">// do stuff
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<h1 id="invite-only-club-pattern">Invite Only Club Pattern</h1>
+<p>One other way to restrict access to certain smart contract functionality is by creating an <em>invite-only club</em>. With this access pattern, anyone who has a club membership, can &quot;invite&quot; new members by creating a membership card for them. Let's see this in code:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module invite_only_club::membership {
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>MembershipCard has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID
+</span><span>    }
+</span><span>
+</span><span>    fun </span><span style="color:#96b5b4;">init</span><span>(ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> publisher = ctx.</span><span style="color:#96b5b4;">sender</span><span>();
+</span><span>        </span><span style="color:#65737e;">// Create member card for the package publisher, so that they can invite
+</span><span>        </span><span style="color:#65737e;">// new members 
+</span><span>        </span><span style="color:#b48ead;">let</span><span> first_member_membership_card = MembershipCard {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        transfer::transfer(first_member_membership_card, publisher);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Function that lets anyone who is already a member (i.e. has a
+</span><span>    </span><span style="color:#65737e;">// MembershipCard) invite a new member (i.e. create a MembershipCard for 
+</span><span>    </span><span style="color:#65737e;">// them)
+</span><span>    fun </span><span style="color:#96b5b4;">invite_member</span><span>(_: &amp;MembershipCard, new_member: address, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#65737e;">// Create a MembershipCard for a new_member
+</span><span>        </span><span style="color:#b48ead;">let</span><span> new_member_membership_card = MembershipCard {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        transfer::transfer(new_member_membership_card, new_member);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Some functionality that requires a club membership to access
+</span><span>    fun </span><span style="color:#96b5b4;">restricted_club_functionality</span><span>(_: &amp;MembershipCard) {...}
+</span><span>}
+</span></code></pre>
+<p>This pattern can also be modified to restrict the total number of people that a member can invite. This could be done, for example, by keeping a field <code>members_invited</code> on the <code>MembershipCard</code> and incrementing this value by 1 every time they call <code>invite_member</code>, and then adding a check to <code>invite_member</code> that <code>members_invited</code> is not higher than some maximum number.</p>
+<h1 id="key-pattern-nft-access">Key Pattern (NFT Access)</h1>
+<p>Another method for restricting access is to require users to pay for access to a function. You can do this by offering a &quot;Key&quot; object for sale in the smart contracts, which, after it has been bought can be used to access the smart contract functionality. In code that would look like this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module ticket_package::key_module {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::iota::</span><span style="color:#d08770;">IOTA</span><span>;
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>Key has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID
+</span><span>    }
+</span><span>
+</span><span>    public fun </span><span style="color:#96b5b4;">buy_key</span><span>(payment: Coin&lt;IOTA&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        ... </span><span style="color:#65737e;">// Process payment, keep Coin in smart contract or send to admin
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> key = Key {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        transfer::transfer(key, ctx.</span><span style="color:#96b5b4;">sender</span><span>());
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Function that requires a Key to execute
+</span><span>    public fun </span><span style="color:#96b5b4;">use_key_for_restricted_function</span><span>(key: &amp;Key, ...) {
+</span><span>        </span><span style="color:#65737e;">// Do something
+</span><span>        ...
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<h1 id="one-time-key-pattern-or-ticket-pattern">One-Time Key Pattern (or Ticket Pattern)</h1>
+<p>A variation on the Key Pattern is the One-Time Key Pattern, or the Ticket Pattern. In this pattern, you require users to buy a ticket to use a function. The ticket is destroyed immediately when it is used to call that function. In that sense the ticket functions as a one-time key.</p>
+<p>The code for this is very similar to the code for the Key Pattern; major difference being that the <code>Ticket</code> is destroyed immediately after the function is called. </p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module ticket_package::ticket_module {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::iota::</span><span style="color:#d08770;">IOTA</span><span>;
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>Ticket has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID
+</span><span>    }
+</span><span>
+</span><span>    public fun </span><span style="color:#96b5b4;">buy_ticket</span><span>(payment: Coin&lt;IOTA&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        ... </span><span style="color:#65737e;">// Process payment, keep Coin in smart contract or send to admin
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">let</span><span> ticket = Ticket {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        transfer::transfer(ticket, ctx.</span><span style="color:#96b5b4;">sender</span><span>());
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Function that requires a ticket to execute
+</span><span>    public fun </span><span style="color:#96b5b4;">use_ticket_for_restricted_function</span><span>(ticket: &amp;Ticket, ...) {
+</span><span>        </span><span style="color:#65737e;">// Do something
+</span><span>        ...
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Destroy ticket after use
+</span><span>        </span><span style="color:#b48ead;">let</span><span> Ticket { id } = ticket;
+</span><span>        object::delete(id);
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Note that we destroy the ticket by unwrapping the <code>Ticket</code> struct and calling <code>object::delete</code> on it. This guarantees that the ticket can only be used once.</p>
+<h1 id="module-level-whitelist">Module Level Whitelist</h1>
+<p>The final pattern is a bit different than the previous ones: It works on the module level instead of the user level. It's therefore also a bit more advanced. It makes smart use of the MoveVM type system to create a whitelist of modules that can access particular parts of your code. Remember that types can only be instantiated in the modules that define them; this pattern works by requiring a type unique to another module as a key. </p>
+<p>As an example, let's imagine you have a DEX smart contract. You might want to partner up with some other protocols later on, and offer swaps with lower fees to those other protocols. Then you could define your DEX module like this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module DEX_package::DEX_module {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::bag;
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::coin::Coin;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// We have to store the `AppKey`s in a bag (instead of a vector) because the
+</span><span>    </span><span style="color:#65737e;">// types will be heterogeneous (the T in AppKey&lt;T&gt; will be different for each app). 
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>AppState has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">whitelist</span><span>: bag::Bag 
+</span><span>    }
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>AdminCap has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// AppKey is used to grant other modules (apps) access to restricted 
+</span><span>    </span><span style="color:#65737e;">// functionality
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>AppKey&lt;phantom T: drop&gt; has copy, drop, store {}
+</span><span>
+</span><span>    fun </span><span style="color:#96b5b4;">init</span><span>(ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#65737e;">// Create AdminCap and send to the package publisher
+</span><span>        </span><span style="color:#b48ead;">let</span><span> publisher = ctx.</span><span style="color:#96b5b4;">sender</span><span>();
+</span><span>        </span><span style="color:#b48ead;">let</span><span> admin_cap = AdminCap {
+</span><span>            id: object::new(ctx)
+</span><span>        };
+</span><span>        transfer::transfer(admin_cap, publisher);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Create AppState that will hold the whitelist
+</span><span>        </span><span style="color:#b48ead;">let</span><span> state = AppState {
+</span><span>            id: object::new(ctx),
+</span><span>            whitelist: bag::new(ctx)
+</span><span>        };
+</span><span>        
+</span><span>        transfer::share_object(state);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Require AdminCap to add a module to whitelist. Note that you don&#39;t need
+</span><span>    </span><span style="color:#65737e;">// to create an actual object of type `App` here, because it&#39;s a phantom
+</span><span>    </span><span style="color:#65737e;">// parameter.
+</span><span>    public fun whitelist_add&lt;App: drop&gt;(_: &amp;AdminCap, state: &amp;</span><span style="color:#b48ead;">mut</span><span> AppState) {
+</span><span>        state.whitelist.</span><span style="color:#96b5b4;">add</span><span>(AppKey&lt;App&gt; {}, </span><span style="color:#d08770;">true</span><span>);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Require AdminCap to remove a module from whitelist. Note that you don&#39;t 
+</span><span>    </span><span style="color:#65737e;">// need to create an actual object of type `App` here, because it&#39;s a 
+</span><span>    </span><span style="color:#65737e;">// phantom parameter.
+</span><span>    public fun whitelist_remove&lt;App: drop&gt;(_: &amp;AdminCap, state: &amp;</span><span style="color:#b48ead;">mut</span><span> AppState) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> _app_key: AppKey&lt;App&gt; = state.whitelist.</span><span style="color:#96b5b4;">remove</span><span>(AppKey&lt;App&gt; {});
+</span><span>    }
+</span><span>
+</span><span>    #[</span><span style="color:#bf616a;">error</span><span>]
+</span><span>    </span><span style="color:#b48ead;">const</span><span> EAppNotWhitelisted: </span><span style="color:#b48ead;">u64 </span><span>= </span><span style="color:#d08770;">0</span><span>;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Allow whitelisted apps to get an AppKey. The trick here is requiring 
+</span><span>    </span><span style="color:#65737e;">// `_app`, an object of type `App`, which can only be created by the module
+</span><span>    </span><span style="color:#65737e;">// that defines it.
+</span><span>    public fun get_app_key&lt;App: drop&gt;(_app: App, state: &amp;</span><span style="color:#b48ead;">mut</span><span> AppState): AppKey&lt;App&gt; {
+</span><span>        assert!(state.whitelist.</span><span style="color:#96b5b4;">contains</span><span>(AppKey&lt;App&gt; {}), EAppNotWhitelisted);
+</span><span>        AppKey&lt;App&gt; {}
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Some swap function for your DEX
+</span><span>    public fun swap&lt;L, R&gt;(coin: Coin&lt;L&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext): Coin&lt;R&gt; {...}
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Whitelisted modules can call this because they can create an `AppKey`.
+</span><span>    public fun swap_reduced_fees&lt;L, R, App: drop&gt;(coin: Coin&lt;L&gt;, key: AppKey&lt;App&gt;, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext): Coin&lt;R&gt; { 
+</span><span>
+</span><span>        ... </span><span style="color:#65737e;">// Execute swap with reduced fees
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>A partner protocol can then publish their Move Package (or upgrade it) to include this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module partner_package::partner_module {
+</span><span>    </span><span style="color:#b48ead;">use </span><span>iota::coin::Coin;
+</span><span>    </span><span style="color:#b48ead;">use </span><span>DEX_package::DEX_module;
+</span><span>
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>PARTNER_APP has drop {}
+</span><span>
+</span><span>    fun use_swap_reduced_fees&lt;L, R&gt;(coin: Coin&lt;L&gt;, dex_state: &amp;</span><span style="color:#b48ead;">mut </span><span>DEX_module::AppState, ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#65737e;">// This call will fail with EAppNotWhitelisted if it&#39;s not whitelisted!
+</span><span>        </span><span style="color:#b48ead;">let</span><span> key = DEX_module::get_app_key(</span><span style="color:#d08770;">PARTNER_APP </span><span>{}, dex_state);
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Use key
+</span><span>        </span><span style="color:#b48ead;">let</span><span> swap_result: Coin&lt;R&gt; = DEX_module::swap_reduced_fees(coin, key, ctx);
+</span><span>
+</span><span>        ... </span><span style="color:#65737e;">// Some other logic specific to this protocol
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>After the partner published this module, the admin of the DEX module can whitelist the partner module by calling <code>whitelist_add&lt;partner_module::PARTNER_APP&gt;(cap, state)</code>. (Calling this function only works after the <code>partner_module::PARTNER_APP</code> module has been published and thus defined.)</p>
+<h1 id="no-restrictions">No Restrictions</h1>
+<p>The most permissive access pattern is the one with no restrictions: Everyone can mutate an object. In code that looks like this:</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>module no_restrictions_package::no_restrictions_module {
+</span><span>    public </span><span style="color:#b48ead;">struct </span><span>SharedMutableObject has key {
+</span><span>        </span><span style="color:#bf616a;">id</span><span>: UID,
+</span><span>        </span><span style="color:#bf616a;">counter</span><span>: </span><span style="color:#b48ead;">u64
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Create a `SharedMutableObject` when module is published
+</span><span>    fun </span><span style="color:#96b5b4;">init</span><span>(ctx: &amp;</span><span style="color:#b48ead;">mut</span><span> TxContext) {
+</span><span>        </span><span style="color:#b48ead;">let</span><span> shared_object = SharedMutableObject {
+</span><span>            id: object::new(ctx),
+</span><span>            counter: </span><span style="color:#d08770;">0
+</span><span>        };
+</span><span>
+</span><span>        transfer::share_object(shared_object);
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// Anyone can call this
+</span><span>    fun </span><span style="color:#96b5b4;">increment_counter</span><span>(shared_object: &amp;</span><span style="color:#b48ead;">mut</span><span> SharedMutableObject) {
+</span><span>        shared_object.counter = shared_object.counter + </span><span style="color:#d08770;">1</span><span>;
+</span><span>    }
+</span><span>    
+</span><span>    </span><span style="color:#65737e;">// Anyone can call this. Will error if `shared_object.count == 0`
+</span><span>    fun </span><span style="color:#96b5b4;">decrement_counter</span><span>(shared_object: &amp;</span><span style="color:#b48ead;">mut</span><span> SharedMutableObject) {
+</span><span>        shared_object.counter = shared_object.counter - </span><span style="color:#d08770;">1</span><span>;
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Note that objects can only be created in the module that defines them. With the code above, this means that the only time a <code>SharedMutableObject</code> is ever created is during module initialization. (Though, of course, you can define a function that creates them.)</p>
+<p>After publishing the module above, anyone can use the address of the shared <code>SharedMutableObject</code> and call <code>increment_counter</code> or <code>decrement_counter</code> on it.</p>
+<p>As a last note, be aware that you can only access and mutate the <code>count</code> field of <code>SharedMutableObject</code>s inside the <code>no_restrictions_module</code>. Any other module that wants to modify the state of a <code>SharedMutableObject</code> can only do so through functions define inside the <code>no_restrictions_module</code>.</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>That's all! Thanks for reading. If you'd like to learn more about Move, check out my other articles <a href="../">here</a>.</p>
+
+        </section>
+
+        
+
+    </article>
+</main>
+
+
+
+        <footer>
+  <div style="display:flex">
+    
+        <a class="soc" href=https:&#x2F;&#x2F;github.com&#x2F;teunvw14 title=GitHub>
+            <i data-feather=github></i>
+        </a>
+    
+        <a class="soc" href=https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;teun-van-wezel&#x2F; title=LinkedIn>
+            <i data-feather=linkedin></i>
+        </a>
+    
+  </div>
+  <div class="footer-info">
+    2026 © Teun van Wezel | Built with <a href="https://www.getzola.org/">Zola</a> / <a
+      href="https://github.com/XXXMrG/archie-zola">Archie-Zola Theme</a>
+  </div>
+</footer>
+
+
+<script>
+    feather.replace();
+</script>
+
+
+    </div>
+</body>
+
+</html>
